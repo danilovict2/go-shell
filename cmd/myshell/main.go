@@ -19,17 +19,12 @@ func main() {
 			os.Exit(1)
 		}
 
-		switch command.Name {
-		case "exit":
-			os.Exit(0)
-		case "echo":
-			for _, arg := range command.Args {
-				fmt.Fprintf(os.Stdout, "%s ", arg)
-			}
-
-			fmt.Println()
-		default:
+		handler, found := Handlers[command.Name]
+		if !found {
 			fmt.Fprintf(os.Stdout, "%s: command not found\n", command)
+			continue
 		}
+
+		fmt.Fprintln(os.Stdout, handler(command.Args))
 	}
 }
