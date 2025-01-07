@@ -15,9 +15,10 @@ var BuiltinHandlers map[string]Handler = map[string]Handler{
 	"echo": echo,
 	"type": commType,
 	"pwd":  pwd,
+	"cd":   cd,
 }
 
-var Builtins []string = []string{"exit", "echo", "type", "pwd"}
+var Builtins []string = []string{"exit", "echo", "type", "pwd", "cd"}
 
 func exit([]string) string {
 	os.Exit(0)
@@ -54,4 +55,13 @@ func pwd(args []string) string {
 	}
 
 	return dir
+}
+
+func cd(args []string) string {
+	err := os.Chdir(args[0])
+	if err != nil {
+		return fmt.Sprintf("cd: %s: No such file or directory", args[0])
+	}
+
+	return ""
 }

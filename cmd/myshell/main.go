@@ -22,7 +22,12 @@ func main() {
 
 		handler, isBuiltin := BuiltinHandlers[command.Name]
 		if isBuiltin {
-			fmt.Fprintln(os.Stdout, handler(command.Args))
+			if output := handler(command.Args); output != "" {
+				fmt.Fprintln(os.Stdout, handler(command.Args))
+			} else {
+				fmt.Print(output)
+			}
+
 			continue
 		}
 
