@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/codecrafters-io/shell-starter-go/internal/executable"
 	"github.com/codecrafters-io/shell-starter-go/internal/reader"
 )
 
@@ -19,12 +20,16 @@ func main() {
 			os.Exit(1)
 		}
 
-		handler, found := Handlers[command.Name]
-		if !found {
-			fmt.Fprintf(os.Stdout, "%s: command not found\n", command)
+		handler, isBuiltin := BuiltinHandlers[command.Name]
+		if isBuiltin {
+			fmt.Fprintln(os.Stdout, handler(command.Args))
 			continue
 		}
 
-		fmt.Fprintln(os.Stdout, handler(command.Args))
+		err = executable.Execute(command)
+		if err != nil {
+			fmt.Fprintf(os.Stdout, "%s: command not found\n", command.Name)
+			continue
+		}
 	}
 }

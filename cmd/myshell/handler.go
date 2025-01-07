@@ -2,17 +2,15 @@ package main
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
-	"path/filepath"
 	"slices"
-	"strings"
-	"sync"
+
+	"github.com/codecrafters-io/shell-starter-go/internal/executable"
 )
 
 type Handler func([]string) string
 
-var Handlers map[string]Handler = map[string]Handler{
+var BuiltinHandlers map[string]Handler = map[string]Handler{
 	"exit": exit,
 	"echo": echo,
 	"type": commType,
@@ -40,29 +38,7 @@ func commType(args []string) string {
 		return fmt.Sprintf("%s is a shell builtin", args[0])
 	}
 
-	executableFilePaths := make([]string, 0)
-	paths := strings.Split(os.Getenv("PATH"), ":")
-	wg := sync.WaitGroup{}
-
-	for _, path := range paths {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			filepath.Walk(path, func(fPath string, info fs.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-
-				if !info.IsDir() && info.Name() == args[0] {
-					executableFilePaths = append(executableFilePaths, fPath)
-				}
-
-				return nil
-			})
-		}()
-	}
-
-	wg.Wait()
+	executableFilePaths := executable.FindExecutableFilePaths(args[0])
 	if len(executableFilePaths) > 0 {
 		return fmt.Sprintf("%s is %s", args[0], executableFilePaths[0])
 	}
