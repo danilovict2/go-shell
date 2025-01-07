@@ -30,17 +30,26 @@ func (r Reader) Read() (Command, error) {
 		return Command{}, err
 	}
 
-	command = command[:len(command)-1]
-	split := strings.Split(command, " ")
+	s := strings.Trim(command, "\r\n")
+	tokens := make([]string, 0)
 
-	ret := Command{
-		Name: split[0],
-		Args: make([]string, 0),
+	for {
+		start := strings.Index(s, "'")
+		if start == -1 {
+			tokens = append(tokens, strings.Fields(s)...)
+			break
+		}
+
+		tokens = append(tokens, strings.Fields(s[:start])...)
+		s = s[start+1:]
+		end := strings.Index(s, "'")
+		token := s[:end]
+		tokens = append(tokens, token)
+		s = s[end+1:]
 	}
 
-	for i := 1; i < len(split); i++ {
-		ret.Args = append(ret.Args, split[i])
-	}
-
-	return ret, nil
+	return Command{
+		Name: strings.ToLower(tokens[0]),
+		Args: tokens[1:],
+	}, nil
 }

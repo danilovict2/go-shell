@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/internal/executable"
 )
@@ -26,12 +27,7 @@ func exit([]string) string {
 }
 
 func echo(args []string) string {
-	ret := ""
-	for _, arg := range args {
-		ret += fmt.Sprintf("%s ", arg)
-	}
-
-	return ret
+	return strings.Join(args, " ")
 }
 
 func commType(args []string) string {
