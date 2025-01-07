@@ -2,22 +2,23 @@ package main
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+	"sync"
 )
 
 type Handler func([]string) string
 
-var Types = map[string]string{
-	"exit": "builtin",
-	"echo": "builtin",
-	"type": "builtin",
-}
-
-var Handlers = map[string]Handler{
+var Handlers map[string]Handler = map[string]Handler{
 	"exit": exit,
 	"echo": echo,
 	"type": commType,
 }
+
+var Builtins []string = []string{"exit", "echo", "type"}
 
 func exit([]string) string {
 	os.Exit(0)
@@ -34,10 +35,37 @@ func echo(args []string) string {
 }
 
 func commType(args []string) string {
-	_type, found := Types[args[0]]
-	if !found {
-		return fmt.Sprintf("%s: not found", args[0])
+	isBuiltin := slices.Contains(Builtins, args[0])
+	if isBuiltin {
+		return fmt.Sprintf("%s is a shell builtin", args[0])
 	}
 
-	return fmt.Sprintf("%s is a shell %s", args[0], _type)
+	executableFilePaths := make([]string, 0)
+	paths := strings.Split(os.Getenv("PATH"), ":")
+	wg := sync.WaitGroup{}
+
+	for _, path := range paths {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			filepath.Walk(path, func(fPath string, info fs.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+
+				if !info.IsDir() && info.Name() == args[0] {
+					executableFilePaths = append(executableFilePaths, fPath)
+				}
+
+				return nil
+			})
+		}()
+	}
+
+	wg.Wait()
+	if len(executableFilePaths) > 0 {
+		return fmt.Sprintf("%s is %s", args[0], executableFilePaths[0])
+	}
+
+	return fmt.Sprintf("%s: not found", args[0])
 }
