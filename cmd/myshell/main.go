@@ -16,7 +16,7 @@ func main() {
 
 		command, err := reader.Read()
 		if err != nil {
-			fmt.Fprintln(os.Stdout, "error reading input:", err)
+			fmt.Fprintln(os.Stderr, "error reading input:", err)
 			os.Exit(1)
 		}
 

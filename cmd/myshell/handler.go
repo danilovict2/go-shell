@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/internal/executable"
@@ -21,8 +22,20 @@ var BuiltinHandlers map[string]Handler = map[string]Handler{
 
 var Builtins []string = []string{"exit", "echo", "type", "pwd", "cd"}
 
-func exit([]string) string {
-	os.Exit(0)
+func exit(args []string) string {
+	var (
+		exitCode int
+		err error
+	)
+
+	if len(args) > 0 {
+		exitCode, err = strconv.Atoi(args[0])
+		if err != nil {
+			return err.Error()
+		}
+	}
+
+	os.Exit(exitCode)
 	return ""
 }
 
@@ -31,6 +44,10 @@ func echo(args []string) string {
 }
 
 func commType(args []string) string {
+	if len(args) != 1 {
+		return ""
+	}
+	
 	isBuiltin := slices.Contains(Builtins, args[0])
 	if isBuiltin {
 		return fmt.Sprintf("%s is a shell builtin", args[0])
