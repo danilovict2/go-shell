@@ -14,9 +14,10 @@ var BuiltinHandlers map[string]Handler = map[string]Handler{
 	"exit": exit,
 	"echo": echo,
 	"type": commType,
+	"pwd":  pwd,
 }
 
-var Builtins []string = []string{"exit", "echo", "type"}
+var Builtins []string = []string{"exit", "echo", "type", "pwd"}
 
 func exit([]string) string {
 	os.Exit(0)
@@ -44,4 +45,13 @@ func commType(args []string) string {
 	}
 
 	return fmt.Sprintf("%s: not found", args[0])
+}
+
+func pwd(args []string) string {
+	dir, err := os.Getwd()
+	if err != nil {
+		return err.Error()
+	}
+
+	return dir
 }
