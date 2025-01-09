@@ -54,9 +54,12 @@ func tokenize(input string) []string {
 	for _, ch := range input {
 		switch {
 		case escapeMode:
+			if openQuote != 0 && openQuote != '\'' && (openQuote != '"' || (ch != '\\' && ch != '$' && ch != '"')) {
+				token += "\\"
+			}
 			token += string(ch)
 			escapeMode = false
-		case ch == '\\' && openQuote == 0:
+		case ch == '\\' && openQuote != '\'':
 			escapeMode = true
 		case ch == openQuote:
 			openQuote = 0
