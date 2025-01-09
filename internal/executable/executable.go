@@ -14,12 +14,11 @@ import (
 
 
 func Execute(command reader.Command) error {
-	executableFilePaths := FindExecutableFilePaths(command.Name)
-	if len(executableFilePaths) == 0 {
+	if len(FindExecutableFilePaths(command.Name)) == 0 {
 		return fmt.Errorf("command not found")
 	}
 
-	comm := exec.Command(executableFilePaths[0], command.Args...)
+	comm := exec.Command(command.Name, command.Args...)
 	comm.Stdout = os.Stdout
 	comm.Stderr = os.Stderr
 
