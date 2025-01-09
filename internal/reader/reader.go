@@ -32,16 +32,22 @@ func (r Reader) Read() (Command, error) {
 
 	input = strings.Trim(input, "\r\n")
 	var (
-		tokens []string = make([]string, 0)
-		token string
-		inQuotes bool
+		tokens    []string = make([]string, 0)
+		token     string
+		openQuote rune
 	)
 
 	for _, ch := range input {
 		switch {
-		case ch == '\'':
-			inQuotes = !inQuotes
-		case ch == ' ' && !inQuotes:
+		case ch == openQuote:
+			openQuote = 0
+		case ch == '\'' || ch == '"':
+			if openQuote == 0 {
+				openQuote = ch
+			} else {
+				token += string(ch)
+			}
+		case ch == ' ' && openQuote == 0:
 			if token != "" {
 				tokens = append(tokens, token)
 				token = ""
