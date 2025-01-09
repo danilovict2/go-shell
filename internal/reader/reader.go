@@ -30,15 +30,34 @@ func (r Reader) Read() (Command, error) {
 		return Command{}, err
 	}
 
-	input = strings.Trim(input, "\r\n")
+	input = strings.TrimSpace(input)
+	tokens := tokenize(input)
+
+	if len(tokens) == 0 {
+		return Command{}, nil
+	}
+
+	return Command{
+		Name: strings.ToLower(tokens[0]),
+		Args: tokens[1:],
+	}, nil
+}
+
+func tokenize(input string) []string {
 	var (
-		tokens    []string = make([]string, 0)
-		token     string
-		openQuote rune
+		tokens     []string
+		token      string
+		openQuote  rune
+		escapeMode bool
 	)
 
 	for _, ch := range input {
 		switch {
+		case escapeMode:
+			token += string(ch)
+			escapeMode = false
+		case ch == '\\' && openQuote == 0:
+			escapeMode = true
 		case ch == openQuote:
 			openQuote = 0
 		case ch == '\'' || ch == '"':
@@ -48,7 +67,7 @@ func (r Reader) Read() (Command, error) {
 				token += string(ch)
 			}
 		case ch == ' ' && openQuote == 0:
-			if token != "" {
+			if len(token) > 0 {
 				tokens = append(tokens, token)
 				token = ""
 			}
@@ -57,12 +76,9 @@ func (r Reader) Read() (Command, error) {
 		}
 	}
 
-	if token != "" {
+	if len(token) > 0 {
 		tokens = append(tokens, token)
 	}
 
-	return Command{
-		Name: strings.ToLower(tokens[0]),
-		Args: tokens[1:],
-	}, nil
+	return tokens
 }
