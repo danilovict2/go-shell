@@ -25,27 +25,34 @@ func New(r *bufio.Reader) Reader {
 }
 
 func (r Reader) Read() (Command, error) {
-	command, err := r.Reader.ReadString('\n')
+	input, err := r.Reader.ReadString('\n')
 	if err != nil {
 		return Command{}, err
 	}
 
-	s := strings.Trim(command, "\r\n")
-	tokens := make([]string, 0)
+	input = strings.Trim(input, "\r\n")
+	var (
+		tokens []string = make([]string, 0)
+		token string
+		inQuotes bool
+	)
 
-	for {
-		start := strings.Index(s, "'")
-		if start == -1 {
-			tokens = append(tokens, strings.Fields(s)...)
-			break
+	for _, ch := range input {
+		switch {
+		case ch == '\'':
+			inQuotes = !inQuotes
+		case ch == ' ' && !inQuotes:
+			if token != "" {
+				tokens = append(tokens, token)
+				token = ""
+			}
+		default:
+			token += string(ch)
 		}
+	}
 
-		tokens = append(tokens, strings.Fields(s[:start])...)
-		s = s[start+1:]
-		end := strings.Index(s, "'")
-		token := s[:end]
+	if token != "" {
 		tokens = append(tokens, token)
-		s = s[end+1:]
 	}
 
 	return Command{
