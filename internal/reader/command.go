@@ -29,6 +29,13 @@ func (c *Command) GetOutputWriters() (stdout io.Writer, stderr io.Writer, err er
             }
 
 			c.Args = slices.Delete(c.Args, i, i+2)
+		case ">>", "1>>":
+			stdout, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+            if err != nil {
+                return nil, nil, fmt.Errorf("error opening file: %w", err)
+            }
+
+			c.Args = slices.Delete(c.Args, i, i+2)
 		case "2>":
 			stderr, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_CREATE, 0644)
             if err != nil {
