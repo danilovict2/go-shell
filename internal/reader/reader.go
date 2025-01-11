@@ -9,15 +9,6 @@ type Reader struct {
 	Reader *bufio.Reader
 }
 
-type Command struct {
-	Name string
-	Args []string
-}
-
-func (c Command) String() string {
-	return c.Name
-}
-
 func New(r *bufio.Reader) Reader {
 	return Reader{
 		Reader: r,

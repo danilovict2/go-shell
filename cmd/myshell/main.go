@@ -17,13 +17,19 @@ func main() {
 		command, err := reader.Read()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "error reading input:", err)
-			os.Exit(1)
+			break
+		}
+
+		stdout, err := command.GetOutputWriter()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			break
 		}
 
 		handler, isBuiltin := BuiltinHandlers[command.Name]
 		if isBuiltin {
 			if output := handler(command.Args); output != "" {
-				fmt.Fprintln(os.Stdout, handler(command.Args))
+				fmt.Fprintln(stdout, handler(command.Args))
 			} else {
 				fmt.Print(output)
 			}
@@ -31,10 +37,11 @@ func main() {
 			continue
 		}
 
-		err = executable.Execute(command)
+		err = executable.Execute(command, stdout, os.Stderr)
 		if err != nil {
-			fmt.Fprintf(os.Stdout, "%s: command not found\n", command.Name)
-			continue
+			if err.Error() == "command not found" {
+				fmt.Fprintf(os.Stderr, "%s: command not found\n", command.Name)
+			}
 		}
 	}
 }
