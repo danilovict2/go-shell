@@ -20,7 +20,7 @@ func main() {
 			break
 		}
 
-		stdout, err := command.GetOutputWriter()
+		stdout, stderr, err := command.GetOutputWriters()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			break
@@ -30,17 +30,15 @@ func main() {
 		if isBuiltin {
 			if output := handler(command.Args); output != "" {
 				fmt.Fprintln(stdout, handler(command.Args))
-			} else {
-				fmt.Print(output)
 			}
 
 			continue
 		}
 
-		err = executable.Execute(command, stdout, os.Stderr)
+		err = executable.Execute(command, stdout, stderr)
 		if err != nil {
 			if err.Error() == "command not found" {
-				fmt.Fprintf(os.Stderr, "%s: command not found\n", command.Name)
+				fmt.Fprintf(stderr, "%s: command not found\n", command.Name)
 			}
 		}
 	}
