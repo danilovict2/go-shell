@@ -2,6 +2,7 @@ package reader
 
 import (
 	"bufio"
+	"slices"
 	"strings"
 )
 
@@ -36,10 +37,12 @@ func (r Reader) Read() (Command, error) {
 
 func tokenize(input string) []string {
 	var (
-		tokens     []string
-		token      string
-		openQuote  rune
-		escapeMode bool
+		tokens      []string
+		token       string
+		openQuote   rune
+		escapeMode  bool
+		wasInQuotes bool
+		redirectors []string = []string{">", "1>", ">>", "1>>", "2>", "2>>"}
 	)
 
 	for _, ch := range input {
@@ -57,13 +60,20 @@ func tokenize(input string) []string {
 		case ch == '\'' || ch == '"':
 			if openQuote == 0 {
 				openQuote = ch
+				wasInQuotes = true
 			} else {
 				token += string(ch)
 			}
 		case ch == ' ' && openQuote == 0:
+			// Detect output redirect
+			if !wasInQuotes && slices.Contains(redirectors, token) {
+				token = "'" + token + "'"
+			}
+
 			if len(token) > 0 {
 				tokens = append(tokens, token)
 				token = ""
+				wasInQuotes = false
 			}
 		default:
 			token += string(ch)
