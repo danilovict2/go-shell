@@ -1,38 +1,81 @@
-package reader
+package parser
 
 import (
 	"bufio"
+	"fmt"
+	"os"
 	"slices"
 	"strings"
+
+	"github.com/codecrafters-io/shell-starter-go/internal/command"
 )
 
-type Reader struct {
+type Parser struct {
 	Reader *bufio.Reader
 }
 
-func New(r *bufio.Reader) Reader {
-	return Reader{
+func New(r *bufio.Reader) Parser {
+	return Parser{
 		Reader: r,
 	}
 }
 
-func (r Reader) Read() (Command, error) {
-	input, err := r.Reader.ReadString('\n')
-	if err != nil {
-		return Command{}, err
+func (p Parser) ParseInput() (command.Command, error) {
+	input := ""
+Loop:
+	for {
+		b, err := p.Reader.ReadByte()
+		if err != nil {
+			return command.Command{}, err
+		}
+
+		switch b {
+		case '\r':
+			fmt.Fprint(os.Stdout, "\r\n")
+			break Loop
+		case '\t':
+			suffixes := autocomplete(input)
+			if len(suffixes) > 0 {
+				suffix := suffixes[0] + " "
+				input += suffix
+				fmt.Fprint(os.Stdout, suffix)
+			}
+		case '\x7F':
+			if len(input) > 0 {
+				input = input[:len(input)-1]
+				fmt.Fprint(os.Stdout, "\b \b")
+			}
+		case '\x03':
+			return command.Command{}, fmt.Errorf("Ctrl+C")
+		default:
+			input += string(b)
+			fmt.Fprint(os.Stdout, string(b))
+		}
 	}
 
 	input = strings.TrimSpace(input)
 	tokens := tokenize(input)
 
 	if len(tokens) == 0 {
-		return Command{}, nil
+		return command.Command{}, nil
 	}
 
-	return Command{
+	return command.Command{
 		Name: strings.ToLower(tokens[0]),
 		Args: tokens[1:],
 	}, nil
+}
+
+func autocomplete(prefix string) (suffixes []string) {
+	suffixes = make([]string, 0)
+
+	for _, command := range command.Builtins {
+		if strings.HasPrefix(command, prefix) {
+			suffixes = append(suffixes, command[len(prefix):])
+		}
+	}
+
+	return suffixes
 }
 
 func tokenize(input string) []string {

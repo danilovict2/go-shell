@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/codecrafters-io/shell-starter-go/internal/command"
 	"github.com/codecrafters-io/shell-starter-go/internal/executable"
 )
 
@@ -19,8 +20,6 @@ var BuiltinHandlers map[string]Handler = map[string]Handler{
 	"pwd":  pwd,
 	"cd":   cd,
 }
-
-var Builtins []string = []string{"exit", "echo", "type", "pwd", "cd"}
 
 func exit(args []string) string {
 	var (
@@ -48,7 +47,7 @@ func commType(args []string) string {
 		return ""
 	}
 	
-	isBuiltin := slices.Contains(Builtins, args[0])
+	isBuiltin := slices.Contains(command.Builtins, args[0])
 	if isBuiltin {
 		return fmt.Sprintf("%s is a shell builtin", args[0])
 	}

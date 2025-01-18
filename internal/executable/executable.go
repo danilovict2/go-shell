@@ -2,7 +2,6 @@ package executable
 
 import (
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -10,20 +9,17 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/codecrafters-io/shell-starter-go/internal/reader"
+	"github.com/codecrafters-io/shell-starter-go/internal/command"
 )
 
 
-func Execute(command reader.Command, stdout, stderr io.Writer) error {
+func Execute(command command.Command) ([]byte, error) {
 	if len(FindExecutableFilePaths(command.Name)) == 0 {
-		return fmt.Errorf("command not found")
+		return []byte{}, fmt.Errorf("command not found")
 	}
 
 	comm := exec.Command(command.Name, command.Args...)
-	comm.Stdout = stdout
-	comm.Stderr = stderr
-
-	return comm.Run()
+	return comm.Output()
 }
 
 func FindExecutableFilePaths(executable string) []string {
