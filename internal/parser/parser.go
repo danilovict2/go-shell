@@ -2,12 +2,14 @@ package parser
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"slices"
 	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/internal/command"
+	"golang.org/x/term"
 )
 
 type Parser struct {
@@ -22,16 +24,21 @@ func New(r *bufio.Reader) Parser {
 
 func (p Parser) ParseInput() (command.Command, error) {
 	input := ""
+
+	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+	if err != nil {
+		return command.Command{}, err
+	}
+
 Loop:
 	for {
 		b, err := p.Reader.ReadByte()
 		if err != nil {
-			return command.Command{}, err
+			break Loop
 		}
 
 		switch b {
-		case '\r':
-			fmt.Fprint(os.Stdout, "\r\n")
+		case '\r', '\n':
 			break Loop
 		case '\t':
 			suffixes := autocomplete(input)
@@ -46,11 +53,21 @@ Loop:
 				fmt.Fprint(os.Stdout, "\b \b")
 			}
 		case '\x03':
-			return command.Command{}, fmt.Errorf("Ctrl+C")
+			fmt.Fprintf(os.Stdout, "^C")
+			err = errors.New("Ctrl+C")
+			break Loop
 		default:
-			input += string(b)
-			fmt.Fprint(os.Stdout, string(b))
+			if b >= 32 {
+				input += string(b)
+				fmt.Fprint(os.Stdout, string(b))
+			}
 		}
+	}
+
+	term.Restore(int(os.Stdin.Fd()), oldState)
+	fmt.Fprintf(os.Stdout, "\n")
+	if err != nil {
+		return command.Command{}, err
 	}
 
 	input = strings.TrimSpace(input)

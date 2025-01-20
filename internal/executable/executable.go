@@ -2,6 +2,7 @@ package executable
 
 import (
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -13,13 +14,16 @@ import (
 )
 
 
-func Execute(command command.Command) ([]byte, error) {
+func Execute(command command.Command, stdout, stderr io.Writer) error {
 	if len(FindExecutableFilePaths(command.Name)) == 0 {
-		return []byte{}, fmt.Errorf("command not found")
+		return fmt.Errorf("command not found")
 	}
 
 	comm := exec.Command(command.Name, command.Args...)
-	return comm.Output()
+	comm.Stdout = stdout
+	comm.Stderr = stderr
+
+	return comm.Run()
 }
 
 func FindExecutableFilePaths(executable string) []string {
