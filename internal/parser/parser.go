@@ -69,30 +69,7 @@ Loop:
 		case '\r', '\n':
 			break Loop
 		case '\t':
-			suffixes := autocomplete(input)
-			switch {
-			case len(suffixes) == 1:
-				doubletab = false
-				suffix := suffixes[0] + " "
-				input += suffix
-				fmt.Fprint(os.Stdout, suffix)
-			case len(suffixes) > 1:
-				if doubletab {
-					fmt.Fprint(os.Stdout, "\r\n")
-					for _, suffix := range suffixes {
-						fmt.Fprint(os.Stdout, input, suffix, "  ")
-					}
-
-					fmt.Fprint(os.Stdout, "\r\n$ ", input)
-				} else {
-					fmt.Fprint(os.Stdout, "\a")
-				}
-
-				doubletab = !doubletab
-			default:
-				doubletab = false
-				fmt.Fprint(os.Stdout, "\a")
-			}
+			input, doubletab = handleTab(input, doubletab)
 		case '\x7F':
 			if len(input) > 0 {
 				input = input[:len(input)-1]
@@ -112,6 +89,41 @@ Loop:
 	return input, err
 }
 
+func handleTab(input string, doubletab bool) (string, bool) {
+    suffixes := autocomplete(input)
+    switch len(suffixes) {
+    case 1:
+        input = appendSuffix(input, suffixes[0]+" ")
+        doubletab = false
+    case 0:
+        doubletab = false
+        fmt.Fprint(os.Stdout, "\a")
+    default:
+        if allHaveSamePrefix(suffixes) {
+            input = appendSuffix(input, suffixes[0])
+        } else {
+            if doubletab {
+                fmt.Fprint(os.Stdout, "\r\n")
+                for _, suffix := range suffixes {
+                    fmt.Fprint(os.Stdout, input, suffix, "  ")
+                }
+                fmt.Fprint(os.Stdout, "\r\n$ ", input)
+            } else {
+                fmt.Fprint(os.Stdout, "\a")
+            }
+        }
+
+		doubletab = !doubletab
+    }
+    return input, doubletab
+}
+
+func appendSuffix(input, suffix string) string {
+    input += suffix
+    fmt.Fprint(os.Stdout, suffix)
+    return input
+}
+
 func autocomplete(prefix string) (suffixes []string) {
 	suffixes = make([]string, 0)
 	if len(prefix) == 0 {
@@ -124,7 +136,8 @@ func autocomplete(prefix string) (suffixes []string) {
 		}
 	}
 
-	for _, command := range executable.Executables {
+	executables := executable.FindExecutables()
+	for _, command := range executables {
 		command = filepath.Base(command)
 		var suffix string
 
@@ -139,6 +152,16 @@ func autocomplete(prefix string) (suffixes []string) {
 
 	slices.Sort(suffixes)
 	return suffixes
+}
+
+func allHaveSamePrefix(suffixes []string) bool {
+	for _, suffix := range suffixes {
+		if !strings.HasPrefix(suffix, suffixes[0]) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func tokenize(input string) []string {

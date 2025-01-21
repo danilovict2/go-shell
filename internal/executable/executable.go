@@ -14,12 +14,6 @@ import (
 	"github.com/codecrafters-io/shell-starter-go/internal/command"
 )
 
-var Executables []string = make([]string, 0)
-
-func init() {
-	Executables = findExecutables()
-}
-
 func Execute(command command.Command, stdout, stderr io.Writer) error {
 	if GetExecutableFilePath(command.Name) == "" {
 		return fmt.Errorf("command not found")
@@ -33,7 +27,8 @@ func Execute(command command.Command, stdout, stderr io.Writer) error {
 }
 
 func GetExecutableFilePath(command string) string {
-	idx := slices.IndexFunc(Executables, func(executable string) bool {
+	executables := FindExecutables()
+	idx := slices.IndexFunc(executables, func(executable string) bool {
 		return command == executable || command == filepath.Base(executable)
 	})
 
@@ -41,10 +36,10 @@ func GetExecutableFilePath(command string) string {
 		return ""
 	}
 
-	return Executables[idx]
+	return executables[idx]
 }
 
-func findExecutables() []string {
+func FindExecutables() []string {
 	executables := make([]string, 0)
 	paths := strings.Split(os.Getenv("PATH"), ":")
 	wg := sync.WaitGroup{}
