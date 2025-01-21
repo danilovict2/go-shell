@@ -2,7 +2,6 @@ package parser
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -23,49 +22,7 @@ func New(r *bufio.Reader) Parser {
 }
 
 func (p Parser) ParseInput() (command.Command, error) {
-	input := ""
-
-	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
-	if err != nil {
-		return command.Command{}, err
-	}
-
-Loop:
-	for {
-		b, err := p.Reader.ReadByte()
-		if err != nil {
-			break Loop
-		}
-
-		switch b {
-		case '\r', '\n':
-			break Loop
-		case '\t':
-			suffixes := autocomplete(input)
-			if len(suffixes) > 0 {
-				suffix := suffixes[0] + " "
-				input += suffix
-				fmt.Fprint(os.Stdout, suffix)
-			}
-		case '\x7F':
-			if len(input) > 0 {
-				input = input[:len(input)-1]
-				fmt.Fprint(os.Stdout, "\b \b")
-			}
-		case '\x03':
-			fmt.Fprintf(os.Stdout, "^C")
-			err = errors.New("Ctrl+C")
-			break Loop
-		default:
-			if b >= 32 {
-				input += string(b)
-				fmt.Fprint(os.Stdout, string(b))
-			}
-		}
-	}
-
-	term.Restore(int(os.Stdin.Fd()), oldState)
-	fmt.Fprintf(os.Stdout, "\n")
+	input, err := p.readInput()
 	if err != nil {
 		return command.Command{}, err
 	}
@@ -81,6 +38,60 @@ Loop:
 		Name: strings.ToLower(tokens[0]),
 		Args: tokens[1:],
 	}, nil
+}
+
+func (p Parser) readInput() (string, error) {
+	var (
+		b        byte
+		input    string
+	)
+
+	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+	if err != nil {
+		return "", err
+	}
+
+	defer func(){
+		term.Restore(int(os.Stdin.Fd()), oldState)
+		fmt.Fprintf(os.Stdout, "\n")
+	}()
+
+Loop:
+	for {
+		b, err = p.Reader.ReadByte()
+		if err != nil {
+			break Loop
+		}
+
+		switch b {
+		case '\r', '\n':
+			break Loop
+		case '\t':
+			suffixes := autocomplete(input)
+			if len(suffixes) > 0 {
+				suffix := suffixes[0] + " "
+				input += suffix
+				fmt.Fprint(os.Stdout, suffix)
+			} else {
+				fmt.Fprint(os.Stdout, "\a")
+			}
+		case '\x7F':
+			if len(input) > 0 {
+				input = input[:len(input)-1]
+				fmt.Fprint(os.Stdout, "\b \b")
+			}
+		case '\x03':
+			fmt.Fprintf(os.Stdout, "^C")
+			return "", fmt.Errorf("^C")
+		default:
+			if b >= 32 {
+				input += string(b)
+				fmt.Fprint(os.Stdout, string(b))
+			}
+		}
+	}
+
+	return input, err
 }
 
 func autocomplete(prefix string) (suffixes []string) {
