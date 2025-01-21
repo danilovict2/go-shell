@@ -4,10 +4,12 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/internal/command"
+	"github.com/codecrafters-io/shell-starter-go/internal/executable"
 	"golang.org/x/term"
 )
 
@@ -98,6 +100,13 @@ func autocomplete(prefix string) (suffixes []string) {
 	suffixes = make([]string, 0)
 
 	for _, command := range command.Builtins {
+		if strings.HasPrefix(command, prefix) {
+			suffixes = append(suffixes, command[len(prefix):])
+		}
+	}
+
+	for _, command := range executable.Executables {
+		command = filepath.Base(command)
 		if strings.HasPrefix(command, prefix) {
 			suffixes = append(suffixes, command[len(prefix):])
 		}

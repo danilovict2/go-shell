@@ -7,15 +7,21 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 
 	"github.com/codecrafters-io/shell-starter-go/internal/command"
 )
 
+var Executables []string = make([]string, 0)
+
+func init() {
+	Executables = findExecutables()
+}
 
 func Execute(command command.Command, stdout, stderr io.Writer) error {
-	if len(FindExecutableFilePaths(command.Name)) == 0 {
+	if GetExecutableFilePath(command.Name) == "" {
 		return fmt.Errorf("command not found")
 	}
 
@@ -26,8 +32,20 @@ func Execute(command command.Command, stdout, stderr io.Writer) error {
 	return comm.Run()
 }
 
-func FindExecutableFilePaths(executable string) []string {
-	executableFilePaths := make([]string, 0)
+func GetExecutableFilePath(command string) string {
+	idx := slices.IndexFunc(Executables, func(executable string) bool {
+		return command == executable || command == filepath.Base(executable)
+	})
+
+	if idx == -1 {
+		return ""
+	}
+
+	return Executables[idx]
+}
+
+func findExecutables() []string {
+	executables := make([]string, 0)
 	paths := strings.Split(os.Getenv("PATH"), ":")
 	wg := sync.WaitGroup{}
 
@@ -40,16 +58,15 @@ func FindExecutableFilePaths(executable string) []string {
 					return err
 				}
 
-				if !info.IsDir() && info.Name() == executable {
-					executableFilePaths = append(executableFilePaths, fPath)
+				if !info.IsDir() && info.Mode().Perm()&0100 != 0 {
+					executables = append(executables, fPath)
 				}
 
 				return nil
 			})
 		}()
 	}
-
+	
 	wg.Wait()
-
-	return executableFilePaths
+	return executables
 }

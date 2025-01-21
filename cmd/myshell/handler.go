@@ -52,9 +52,9 @@ func commType(args []string) string {
 		return fmt.Sprintf("%s is a shell builtin", args[0])
 	}
 
-	executableFilePaths := executable.FindExecutableFilePaths(args[0])
-	if len(executableFilePaths) > 0 {
-		return fmt.Sprintf("%s is %s", args[0], executableFilePaths[0])
+	executableFilePath := executable.GetExecutableFilePath(args[0])
+	if executableFilePath != "" {
+		return fmt.Sprintf("%s is %s", args[0], executableFilePath)
 	}
 
 	return fmt.Sprintf("%s: not found", args[0])
