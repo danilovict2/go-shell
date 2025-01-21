@@ -137,6 +137,7 @@ func autocomplete(prefix string) (suffixes []string) {
 		}
 	}
 
+	slices.Sort(suffixes)
 	return suffixes
 }
 
