@@ -44,8 +44,8 @@ func (p Parser) ParseInput() (command.Command, error) {
 
 func (p Parser) readInput() (string, error) {
 	var (
-		b        byte
-		input    string
+		input     string
+		doubletab bool
 	)
 
 	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
@@ -53,14 +53,14 @@ func (p Parser) readInput() (string, error) {
 		return "", err
 	}
 
-	defer func(){
+	defer func() {
 		term.Restore(int(os.Stdin.Fd()), oldState)
 		fmt.Fprintf(os.Stdout, "\n")
 	}()
 
 Loop:
 	for {
-		b, err = p.Reader.ReadByte()
+		b, err := p.Reader.ReadByte()
 		if err != nil {
 			break Loop
 		}
@@ -70,11 +70,27 @@ Loop:
 			break Loop
 		case '\t':
 			suffixes := autocomplete(input)
-			if len(suffixes) > 0 {
+			switch {
+			case len(suffixes) == 1:
+				doubletab = false
 				suffix := suffixes[0] + " "
 				input += suffix
 				fmt.Fprint(os.Stdout, suffix)
-			} else {
+			case len(suffixes) > 1:
+				if doubletab {
+					fmt.Fprint(os.Stdout, "\r\n")
+					for _, suffix := range suffixes {
+						fmt.Fprint(os.Stdout, input, suffix, "  ")
+					}
+
+					fmt.Fprint(os.Stdout, "\r\n$ ", input)
+				} else {
+					fmt.Fprint(os.Stdout, "\a")
+				}
+
+				doubletab = !doubletab
+			default:
+				doubletab = false
 				fmt.Fprint(os.Stdout, "\a")
 			}
 		case '\x7F':
@@ -98,6 +114,9 @@ Loop:
 
 func autocomplete(prefix string) (suffixes []string) {
 	suffixes = make([]string, 0)
+	if len(prefix) == 0 {
+		return suffixes
+	}
 
 	for _, command := range command.Builtins {
 		if strings.HasPrefix(command, prefix) {
@@ -107,7 +126,13 @@ func autocomplete(prefix string) (suffixes []string) {
 
 	for _, command := range executable.Executables {
 		command = filepath.Base(command)
-		if strings.HasPrefix(command, prefix) {
+		var suffix string
+
+		if len(command) >= len(prefix) {
+			suffix = command[len(prefix):]
+		}
+
+		if strings.HasPrefix(command, prefix) && !slices.Contains(suffixes, suffix) {
 			suffixes = append(suffixes, command[len(prefix):])
 		}
 	}
