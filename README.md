@@ -13,7 +13,7 @@ Ensure you have a [Go](https://golang.org/doc/install) environment set up.
 ### Clone the project:
 
 ```bash
-git https://github.com/danilovict2/go-shell.git
+git clone https://github.com/danilovict2/go-shell.git
 cd go-shell
 ```
 ### Run:
