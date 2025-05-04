@@ -4,8 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strings"
 
-	"github.com/codecrafters-io/shell-starter-go/internal/executable"
+	"github.com/codecrafters-io/shell-starter-go/internal/command"
 	"github.com/codecrafters-io/shell-starter-go/internal/parser"
 )
 
@@ -19,29 +20,26 @@ func main() {
 			fmt.Fprintln(os.Stderr, "error reading input:", err)
 			break
 		}
-		
-		stdout, stderr, err := commands[0].GetOutputWriters()
+
+		cmd, err := command.Pipeline(commands)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			break
 		}
 
-		handler, isBuiltin := BuiltinHandlers[commands[0].Name]
-		if isBuiltin {
-			if output := handler(commands[0].Args); output != "" {
-				fmt.Fprintln(stdout, handler(commands[0].Args))
-			} else {
-				fmt.Print(output)
-			}
-
-			continue
+		stdout, stderr, err := cmd.GetOutputWriters()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			break
 		}
 
-		err = executable.Execute(commands[0], stdout, stderr)
+		output, err := cmd.GetOutput()
 		if err != nil {
-			if err.Error() == "command not found" {
-				fmt.Fprintf(os.Stderr, "%s: command not found\n", commands[0].Name)
-			}
+			fmt.Fprintln(stderr, err)
+		} else if output != "" {
+			fmt.Fprintln(stdout, strings.TrimSpace(output))
+		} else {
+			fmt.Fprint(stdout, output)
 		}
 	}
 }

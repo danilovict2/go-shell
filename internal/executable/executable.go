@@ -1,30 +1,13 @@
 package executable
 
 import (
-	"fmt"
-	"io"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
-
-	"github.com/codecrafters-io/shell-starter-go/internal/command"
 )
-
-func Execute(command command.Command, stdout, stderr io.Writer) error {
-	if GetExecutableFilePath(command.Name) == "" {
-		return fmt.Errorf("command not found")
-	}
-
-	comm := exec.Command(command.Name, command.Args...)
-	comm.Stdout = stdout
-	comm.Stderr = stderr
-
-	return comm.Run()
-}
 
 func GetExecutableFilePath(command string) string {
 	executables := FindExecutables()
