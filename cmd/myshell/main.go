@@ -14,22 +14,22 @@ func main() {
 		fmt.Fprint(os.Stdout, "$ ")
 		parser := parser.New(bufio.NewReader(os.Stdin))
 
-		command, err := parser.ParseInput()
+		commands, err := parser.ParseInput()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "error reading input:", err)
 			break
 		}
-
-		stdout, stderr, err := command.GetOutputWriters()
+		
+		stdout, stderr, err := commands[0].GetOutputWriters()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			break
 		}
 
-		handler, isBuiltin := BuiltinHandlers[command.Name]
+		handler, isBuiltin := BuiltinHandlers[commands[0].Name]
 		if isBuiltin {
-			if output := handler(command.Args); output != "" {
-				fmt.Fprintln(stdout, handler(command.Args))
+			if output := handler(commands[0].Args); output != "" {
+				fmt.Fprintln(stdout, handler(commands[0].Args))
 			} else {
 				fmt.Print(output)
 			}
@@ -37,10 +37,10 @@ func main() {
 			continue
 		}
 
-		err = executable.Execute(command, stdout, stderr)
+		err = executable.Execute(commands[0], stdout, stderr)
 		if err != nil {
 			if err.Error() == "command not found" {
-				fmt.Fprintf(os.Stderr, "%s: command not found\n", command.Name)
+				fmt.Fprintf(os.Stderr, "%s: command not found\n", commands[0].Name)
 			}
 		}
 	}

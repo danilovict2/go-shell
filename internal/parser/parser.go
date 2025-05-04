@@ -23,23 +23,29 @@ func New(r *bufio.Reader) Parser {
 	}
 }
 
-func (p Parser) ParseInput() (command.Command, error) {
-	input, err := p.readInput()
+func (p Parser) ParseInput() ([]command.Command, error) {
+	line, err := p.readInput()
 	if err != nil {
-		return command.Command{}, err
+		return nil, err
 	}
 
-	input = strings.TrimSpace(input)
-	tokens := tokenize(input)
+	commands := strings.Split(line, "|")
+	ret := make([]command.Command, 0)
 
-	if len(tokens) == 0 {
-		return command.Command{}, nil
+	for _, cmd := range commands {
+		cmd = strings.TrimSpace(cmd)
+		tokens := tokenize(cmd)
+		if len(tokens) == 0 {
+			continue
+		}
+
+		ret = append(ret, command.Command{
+			Name: strings.ToLower(tokens[0]),
+			Args: tokens[1:],
+		})
 	}
 
-	return command.Command{
-		Name: strings.ToLower(tokens[0]),
-		Args: tokens[1:],
-	}, nil
+	return ret, nil
 }
 
 func (p Parser) readInput() (string, error) {
@@ -90,38 +96,38 @@ Loop:
 }
 
 func handleTab(input string, doubletab bool) (string, bool) {
-    suffixes := autocomplete(input)
-    switch len(suffixes) {
-    case 1:
-        input = appendSuffix(input, suffixes[0]+" ")
-        doubletab = false
-    case 0:
-        doubletab = false
-        fmt.Fprint(os.Stdout, "\a")
-    default:
-        if allHaveSamePrefix(suffixes) {
-            input = appendSuffix(input, suffixes[0])
-        } else {
-            if doubletab {
-                fmt.Fprint(os.Stdout, "\r\n")
-                for _, suffix := range suffixes {
-                    fmt.Fprint(os.Stdout, input, suffix, "  ")
-                }
-                fmt.Fprint(os.Stdout, "\r\n$ ", input)
-            } else {
-                fmt.Fprint(os.Stdout, "\a")
-            }
-        }
+	suffixes := autocomplete(input)
+	switch len(suffixes) {
+	case 1:
+		input = appendSuffix(input, suffixes[0]+" ")
+		doubletab = false
+	case 0:
+		doubletab = false
+		fmt.Fprint(os.Stdout, "\a")
+	default:
+		if allHaveSamePrefix(suffixes) {
+			input = appendSuffix(input, suffixes[0])
+		} else {
+			if doubletab {
+				fmt.Fprint(os.Stdout, "\r\n")
+				for _, suffix := range suffixes {
+					fmt.Fprint(os.Stdout, input, suffix, "  ")
+				}
+				fmt.Fprint(os.Stdout, "\r\n$ ", input)
+			} else {
+				fmt.Fprint(os.Stdout, "\a")
+			}
+		}
 
 		doubletab = !doubletab
-    }
-    return input, doubletab
+	}
+	return input, doubletab
 }
 
 func appendSuffix(input, suffix string) string {
-    input += suffix
-    fmt.Fprint(os.Stdout, suffix)
-    return input
+	input += suffix
+	fmt.Fprint(os.Stdout, suffix)
+	return input
 }
 
 func autocomplete(prefix string) (suffixes []string) {
