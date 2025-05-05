@@ -20,23 +20,6 @@ func main() {
 			break
 		}
 
-		cmd, err := command.Pipeline(commands)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			break
-		}
-
-		stdout, stderr, err := cmd.GetOutputWriters()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			break
-		}
-
-		output, err := cmd.GetOutput()
-		if err != nil {
-			fmt.Fprintln(stderr, err)
-		} else if output != "" {
-			fmt.Fprintln(stdout, output)
-		}
+		command.Pipeline(commands)
 	}
 }

@@ -39,10 +39,7 @@ func (p Parser) ParseInput() ([]command.Command, error) {
 			continue
 		}
 
-		ret = append(ret, command.Command{
-			Name: strings.ToLower(tokens[0]),
-			Args: tokens[1:],
-		})
+		ret = append(ret, *command.New(strings.ToLower(tokens[0]), tokens[1:]))
 	}
 
 	return ret, nil

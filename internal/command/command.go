@@ -13,96 +13,103 @@ import (
 )
 
 type Command struct {
-	Name  string
-	Args  []string
-	Input string
+	Name   string
+	Args   []string
+	Stdout io.WriteCloser
+	Stderr io.WriteCloser
+}
+
+func New(name string, args []string) *Command {
+	c := &Command{
+		Name: name,
+		Args: args,
+	}
+
+	c.setOutputWriters()
+	return c
 }
 
 func (c Command) String() string {
 	return c.Name
 }
 
-func (c *Command) GetOutputWriters() (stdout io.Writer, stderr io.Writer, err error) {
-	stdout = os.Stdout
-	stderr = os.Stderr
+func (c *Command) setOutputWriters() {
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	var err error
 
-	for i := 0; i < len(c.Args)-1; i++ {
+	for i := range len(c.Args) - 1 {
 		switch c.Args[i] {
 		case "'>'", "'1>'":
-			stdout, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_CREATE, 0644)
+			c.Stdout, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_CREATE, 0644)
 			if err != nil {
-				return nil, nil, fmt.Errorf("error opening file: %w", err)
+				fmt.Fprintf(os.Stderr, "error opening file: %s\n", err.Error())
 			}
 
 			c.Args = slices.Delete(c.Args, i, i+2)
 		case "'>>'", "'1>>'":
-			stdout, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+			c.Stdout, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 			if err != nil {
-				return nil, nil, fmt.Errorf("error opening file: %w", err)
+				fmt.Fprintf(os.Stderr, "error opening file: %s\n", err.Error())
 			}
 
 			c.Args = slices.Delete(c.Args, i, i+2)
 		case "'2>'":
-			stderr, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_CREATE, 0644)
+			c.Stderr, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_CREATE, 0644)
 			if err != nil {
-				return nil, nil, fmt.Errorf("error opening file: %w", err)
+				fmt.Fprintf(os.Stderr, "error opening file: %s\n", err.Error())
 			}
 
 			c.Args = slices.Delete(c.Args, i, i+2)
 		case "'2>>'":
-			stderr, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+			c.Stderr, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 			if err != nil {
-				return nil, nil, fmt.Errorf("error opening file: %w", err)
+				fmt.Fprintf(os.Stderr, "error opening file: %s\n", err.Error())
 			}
 
 			c.Args = slices.Delete(c.Args, i, i+2)
 		}
 	}
-
-	return stdout, stderr, nil
 }
 
-func Pipeline(commands []Command) (Command, error) {
-	for i := range len(commands) - 1 {
-		out, err := commands[i].GetOutput()
-		if err != nil {
-			return Command{}, err
-		}
-
-		commands[i+1].Input = out
+func Pipeline(commands []Command) {
+	if len(commands) == 1 {
+		commands[0].execute()
 	}
 
-	return commands[len(commands)-1], nil
+	for i := 1; i < len(commands); i++ {
+
+	}
 }
 
-func (c *Command) GetOutput() (string, error) {
+func (c *Command) execute() {
 	handler, isBuiltin := BuiltinHandlers[c.Name]
 	if isBuiltin {
-		return handler(c.Args), nil
+		if output := handler(c.Args); output != "" {
+			fmt.Fprintln(c.Stdout, output)
+		}
+		return
 	}
 
-	out, err := c.getNonBuiltinOutput()
-	if err != nil {
-		return "", err
-	}
-
-	return strings.TrimRight(string(out), "\n"), nil
+	c.executeNonBuiltin()
 }
 
-func (c *Command) getNonBuiltinOutput() ([]byte, error) {
+func (c *Command) executeNonBuiltin() {
 	if executable.GetExecutableFilePath(c.Name) == "" {
-		return nil, fmt.Errorf("%s: command not found", c.Name)
+		fmt.Fprintf(c.Stderr, "%s: command not found\n", c.Name)
+		return
 	}
 
 	comm := exec.Command(c.Name, c.Args...)
 	stdin, err := comm.StdinPipe()
 	if err != nil {
-		return nil, err
+		fmt.Fprintln(c.Stderr, err)
+		return
 	}
 
 	go func() {
 		defer stdin.Close()
-		io.WriteString(stdin, c.Input)
+		//io.WriteString(stdin, c.Input)
 	}()
 
 	var stderrBuf bytes.Buffer
@@ -111,8 +118,10 @@ func (c *Command) getNonBuiltinOutput() ([]byte, error) {
 	out, err := comm.Output()
 	if err != nil {
 		msg := strings.TrimSpace(stderrBuf.String())
-		return out, fmt.Errorf("%s", msg)
+		fmt.Fprintln(c.Stderr, msg)
 	}
 
-	return out, nil
+	if string(out) != "" {
+		fmt.Fprintln(c.Stdout, strings.TrimRight(string(out), "\n"))
+	}
 }
