@@ -13,8 +13,9 @@ import (
 )
 
 type Command struct {
-	Name string
-	Args []string
+	Name  string
+	Args  []string
+	Input string
 }
 
 func (c Command) String() string {
@@ -62,13 +63,13 @@ func (c *Command) GetOutputWriters() (stdout io.Writer, stderr io.Writer, err er
 }
 
 func Pipeline(commands []Command) (Command, error) {
-	for i := range len(commands)-1 {
+	for i := range len(commands) - 1 {
 		out, err := commands[i].GetOutput()
 		if err != nil {
 			return Command{}, err
 		}
 
-		commands[i+1].Args = append(commands[i+1].Args, out)
+		commands[i+1].Input = out
 	}
 
 	return commands[len(commands)-1], nil
@@ -85,7 +86,7 @@ func (c *Command) GetOutput() (string, error) {
 		return "", err
 	}
 
-	return string(out), nil
+	return strings.TrimRight(string(out), "\n"), nil
 }
 
 func (c *Command) getNonBuiltinOutput() ([]byte, error) {
@@ -94,6 +95,15 @@ func (c *Command) getNonBuiltinOutput() ([]byte, error) {
 	}
 
 	comm := exec.Command(c.Name, c.Args...)
+	stdin, err := comm.StdinPipe()
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		defer stdin.Close()
+		io.WriteString(stdin, c.Input)
+	}()
 
 	var stderrBuf bytes.Buffer
 	comm.Stderr = &stderrBuf
@@ -103,6 +113,6 @@ func (c *Command) getNonBuiltinOutput() ([]byte, error) {
 		msg := strings.TrimSpace(stderrBuf.String())
 		return out, fmt.Errorf("%s", msg)
 	}
-	
+
 	return out, nil
 }

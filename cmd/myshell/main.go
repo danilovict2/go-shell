@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/internal/command"
 	"github.com/codecrafters-io/shell-starter-go/internal/parser"
@@ -37,9 +36,7 @@ func main() {
 		if err != nil {
 			fmt.Fprintln(stderr, err)
 		} else if output != "" {
-			fmt.Fprintln(stdout, strings.TrimSpace(output))
-		} else {
-			fmt.Fprint(stdout, output)
+			fmt.Fprintln(stdout, output)
 		}
 	}
 }
