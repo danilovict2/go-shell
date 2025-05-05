@@ -44,6 +44,7 @@ func (c *Command) setOutputWriters() {
 			c.Stdout, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_CREATE, 0644)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error opening file: %s\n", err.Error())
+				return
 			}
 
 			c.Args = slices.Delete(c.Args, i, i+2)
@@ -51,6 +52,7 @@ func (c *Command) setOutputWriters() {
 			c.Stdout, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error opening file: %s\n", err.Error())
+				return
 			}
 
 			c.Args = slices.Delete(c.Args, i, i+2)
@@ -58,6 +60,7 @@ func (c *Command) setOutputWriters() {
 			c.Stderr, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_CREATE, 0644)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error opening file: %s\n", err.Error())
+				return
 			}
 
 			c.Args = slices.Delete(c.Args, i, i+2)
@@ -65,6 +68,7 @@ func (c *Command) setOutputWriters() {
 			c.Stderr, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error opening file: %s\n", err.Error())
+				return
 			}
 
 			c.Args = slices.Delete(c.Args, i, i+2)
@@ -73,9 +77,7 @@ func (c *Command) setOutputWriters() {
 }
 
 func Pipeline(commands []Command) {
-	if len(commands) == 1 {
-		commands[0].execute()
-	}
+	commands[0].execute()
 
 	for i := 1; i < len(commands); i++ {
 
