@@ -1,28 +1,34 @@
 package command
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"slices"
-	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/internal/executable"
 )
 
+
 type Command struct {
-	Name   string
-	Args   []string
-	Stdout io.WriteCloser
-	Stderr io.WriteCloser
+	Name       string
+	Args       []string
+	Stdout     io.WriteCloser
+	Stderr     io.WriteCloser
+	OutputChan chan message
+}
+
+type message struct {
+	data  []byte
+	isError bool
 }
 
 func New(name string, args []string) *Command {
 	c := &Command{
-		Name: name,
-		Args: args,
+		Name:       name,
+		Args:       args,
+		OutputChan: make(chan message),
 	}
 
 	c.setOutputWriters()
@@ -77,53 +83,90 @@ func (c *Command) setOutputWriters() {
 }
 
 func Pipeline(commands []Command) {
-	commands[0].execute()
+	go commands[0].execute(*New("", nil))
+	isLastNewLine := true
 
-	for i := 1; i < len(commands); i++ {
+	for out := range commands[0].OutputChan {
+		data := string(out.data)
+		isLastNewLine = data[len(data)-1] == '\n'
 
+		if out.isError {
+			fmt.Fprint(commands[0].Stderr, data)
+		} else {
+			fmt.Fprint(commands[0].Stdout, data)
+		}
+	}
+
+	if !isLastNewLine {
+		fmt.Fprintln(commands[0].Stdout)
 	}
 }
 
-func (c *Command) execute() {
+func (c *Command) execute(prev Command) {
 	handler, isBuiltin := BuiltinHandlers[c.Name]
 	if isBuiltin {
 		if output := handler(c.Args); output != "" {
-			fmt.Fprintln(c.Stdout, output)
+			c.OutputChan <- message{data: []byte(output), isError: false}
 		}
+
+		close(c.OutputChan)
 		return
 	}
 
-	c.executeNonBuiltin()
+	go c.executeNonBuiltin(prev)
 }
 
-func (c *Command) executeNonBuiltin() {
+func (c *Command) executeNonBuiltin(prev Command) {
+	defer close(c.OutputChan)
 	if executable.GetExecutableFilePath(c.Name) == "" {
-		fmt.Fprintf(c.Stderr, "%s: command not found\n", c.Name)
+		c.OutputChan <- message{data: fmt.Appendf(nil, "%s: command not found\n", c.Name), isError: true}
 		return
 	}
 
 	comm := exec.Command(c.Name, c.Args...)
 	stdin, err := comm.StdinPipe()
 	if err != nil {
-		fmt.Fprintln(c.Stderr, err)
+		return
+	}
+
+	stdout, err := comm.StdoutPipe()
+	if err != nil {
+		return
+	}
+
+	stderr, err := comm.StderrPipe()
+	if err != nil {
+		return
+	}
+
+	if err := comm.Start(); err != nil {
 		return
 	}
 
 	go func() {
-		defer stdin.Close()
-		//io.WriteString(stdin, c.Input)
+		for input := range prev.OutputChan {
+			if !input.isError {
+				stdin.Write(input.data)
+			}
+		}
 	}()
 
-	var stderrBuf bytes.Buffer
-	comm.Stderr = &stderrBuf
+	go func() {
+		data := make([]byte, 1024)
+		for {
+			n, err := stdout.Read(data)
+			if err != nil {
+				break
+			}
 
-	out, err := comm.Output()
-	if err != nil {
-		msg := strings.TrimSpace(stderrBuf.String())
-		fmt.Fprintln(c.Stderr, msg)
+			c.OutputChan <- message{data: data[:n], isError: false}
+		}
+	}()
+
+	slurp, _ := io.ReadAll(stderr)
+	if len(slurp) > 0 {
+		c.OutputChan <- message{data: slurp, isError: true}
 	}
 
-	if string(out) != "" {
-		fmt.Fprintln(c.Stdout, strings.TrimRight(string(out), "\n"))
-	}
+	comm.Wait()
 }
