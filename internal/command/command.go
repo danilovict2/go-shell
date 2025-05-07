@@ -87,7 +87,7 @@ func Pipeline(commands []Command) {
 	}
 }
 
-func (c *Command) execute(stdin io.Reader, stdout, stderr io.WriteCloser, wg *sync.WaitGroup) {
+func (c *Command) execute(stdin io.ReadCloser, stdout, stderr io.WriteCloser, wg *sync.WaitGroup) {
 	handler, isBuiltin := BuiltinHandlers[c.Name]
 	if isBuiltin {
 		if output := handler(c.Args); output != "" {
@@ -97,12 +97,10 @@ func (c *Command) execute(stdin io.Reader, stdout, stderr io.WriteCloser, wg *sy
 		c.executeNonBuiltin(stdin, stdout, stderr)
 	}
 
-	if stdout != os.Stdout && stdout != os.Stderr {
-		stdout.Close()
-	}
-
-	if stderr != os.Stdout && stderr != os.Stderr {
-		stderr.Close()
+	for _, f := range []io.Closer{stdin, stdout, stderr} {
+		if f != os.Stdin && f != os.Stdout && f != os.Stderr {
+			f.Close()
+		}
 	}
 
 	if wg != nil {
