@@ -68,21 +68,34 @@ func (c *Command) getOutputWriters() (stdout, stderr io.WriteCloser, err error) 
 }
 
 func Pipeline(commands []Command) {
-	stdout, stderr, err := commands[len(commands)-1].getOutputWriters()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return
+	stderrs := make([]io.WriteCloser, 0)
+	var (
+		stdout, stderr io.WriteCloser
+		err            error
+	)
+
+	for i, command := range commands {
+		stdout, stderr, err = command.getOutputWriters()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return
+		}
+		stderrs = append(stderrs, stderr)
+		commands[i] = command
 	}
 
 	if len(commands) == 1 {
 		commands[0].execute(os.Stdin, stdout, stderr, nil)
-	} else if len(commands) == 2 {
-		pr, pw := io.Pipe()
-
+	} else {
 		wg := &sync.WaitGroup{}
 		wg.Add(2)
-		go commands[0].execute(os.Stdin, pw, stderr, wg)
-		go commands[1].execute(pr, stdout, stderr, wg)
+		pr, pw := io.Pipe()
+		go commands[0].execute(os.Stdin, pw, stderrs[0], wg)
+		for i := 1; i < len(commands)-2; i++ {
+			wg.Add(1)
+			go commands[i].execute(pr, pw, stderrs[i], wg)
+		}
+		go commands[len(commands)-1].execute(pr, stdout, stderr, wg)
 		wg.Wait()
 	}
 }
