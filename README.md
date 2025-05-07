@@ -76,6 +76,31 @@ xyz_foo_bar_baz
 
 If there are multiple matches, pressing `Tab` again will show a list of possible completions.
 
+### Pipelines
+
+A pipeline connects the standard output of one command to the standard input of the next command using the | operator. For example:
+
+```bash
+ls /tmp/foo/file | wc
+```
+
+This will print:
+
+```bash
+      7       7      70
+```
+
+Pipelining more than two commands is possible. For example:
+```bash
+ls -la /tmp | tail -n 5 | head -n 3 | grep "file"
+```
+
+Will print:
+
+```bash
+-rw-rw-r--  1 user user       0 May  7 18:57 file
+```
+
 ## 🤝 Contributing
 
 ### Build the project
