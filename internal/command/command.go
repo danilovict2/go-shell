@@ -6,167 +6,120 @@ import (
 	"os"
 	"os/exec"
 	"slices"
+	"sync"
 
 	"github.com/codecrafters-io/shell-starter-go/internal/executable"
 )
 
-
 type Command struct {
-	Name       string
-	Args       []string
-	Stdout     io.WriteCloser
-	Stderr     io.WriteCloser
-	OutputChan chan message
+	Name string
+	Args []string
 }
 
-type message struct {
-	data  []byte
-	isError bool
-}
-
-func New(name string, args []string) *Command {
-	c := &Command{
-		Name:       name,
-		Args:       args,
-		OutputChan: make(chan message),
+func New(name string, args []string) Command {
+	return Command{
+		Name: name,
+		Args: args,
 	}
-
-	c.setOutputWriters()
-	return c
 }
 
 func (c Command) String() string {
 	return c.Name
 }
 
-func (c *Command) setOutputWriters() {
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
-	var err error
+func (c *Command) getOutputWriters() (stdout, stderr io.WriteCloser, err error) {
+	stdout = os.Stdout
+	stderr = os.Stderr
 
 	for i := range len(c.Args) - 1 {
 		switch c.Args[i] {
 		case "'>'", "'1>'":
-			c.Stdout, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_CREATE, 0644)
+			stdout, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_CREATE, 0644)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "error opening file: %s\n", err.Error())
-				return
+				return nil, nil, fmt.Errorf("error opening file: %v", err)
 			}
 
 			c.Args = slices.Delete(c.Args, i, i+2)
 		case "'>>'", "'1>>'":
-			c.Stdout, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+			stdout, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "error opening file: %s\n", err.Error())
-				return
+				return nil, nil, fmt.Errorf("error opening file: %v", err)
 			}
 
 			c.Args = slices.Delete(c.Args, i, i+2)
 		case "'2>'":
-			c.Stderr, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_CREATE, 0644)
+			stderr, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_CREATE, 0644)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "error opening file: %s\n", err.Error())
-				return
+				return nil, nil, fmt.Errorf("error opening file: %v", err)
 			}
 
 			c.Args = slices.Delete(c.Args, i, i+2)
 		case "'2>>'":
-			c.Stderr, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+			stderr, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "error opening file: %s\n", err.Error())
-				return
+				return nil, nil, fmt.Errorf("error opening file: %v", err)
 			}
 
 			c.Args = slices.Delete(c.Args, i, i+2)
 		}
 	}
+
+	return stdout, stderr, nil
 }
 
 func Pipeline(commands []Command) {
-	go commands[0].execute(*New("", nil))
-	isLastNewLine := true
-
-	for out := range commands[0].OutputChan {
-		data := string(out.data)
-		isLastNewLine = data[len(data)-1] == '\n'
-
-		if out.isError {
-			fmt.Fprint(commands[0].Stderr, data)
-		} else {
-			fmt.Fprint(commands[0].Stdout, data)
-		}
-	}
-
-	if !isLastNewLine {
-		fmt.Fprintln(commands[0].Stdout)
-	}
-}
-
-func (c *Command) execute(prev Command) {
-	handler, isBuiltin := BuiltinHandlers[c.Name]
-	if isBuiltin {
-		if output := handler(c.Args); output != "" {
-			c.OutputChan <- message{data: []byte(output), isError: false}
-		}
-
-		close(c.OutputChan)
+	stdout, stderr, err := commands[len(commands)-1].getOutputWriters()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		return
 	}
 
-	go c.executeNonBuiltin(prev)
+	if len(commands) == 1 {
+		commands[0].execute(os.Stdin, stdout, stderr, nil)
+	} else if len(commands) == 2 {
+		pr, pw := io.Pipe()
+
+		wg := &sync.WaitGroup{}
+		wg.Add(2)
+		go commands[0].execute(os.Stdin, pw, stderr, wg)
+		go commands[1].execute(pr, stdout, stderr, wg)
+		wg.Wait()
+	}
 }
 
-func (c *Command) executeNonBuiltin(prev Command) {
-	defer close(c.OutputChan)
+func (c *Command) execute(stdin io.Reader, stdout, stderr io.WriteCloser, wg *sync.WaitGroup) {
+	handler, isBuiltin := BuiltinHandlers[c.Name]
+	if isBuiltin {
+		if output := handler(c.Args); output != "" {
+			fmt.Fprintln(stdout, output)
+		}
+	} else {
+		c.executeNonBuiltin(stdin, stdout, stderr)
+	}
+
+	if stdout != os.Stdout && stdout != os.Stderr {
+		stdout.Close()
+	}
+
+	if stderr != os.Stdout && stderr != os.Stderr {
+		stderr.Close()
+	}
+
+	if wg != nil {
+		wg.Done()
+	}
+}
+
+func (c *Command) executeNonBuiltin(stdin io.Reader, stdout, stderr io.Writer) {
 	if executable.GetExecutableFilePath(c.Name) == "" {
-		c.OutputChan <- message{data: fmt.Appendf(nil, "%s: command not found\n", c.Name), isError: true}
+		fmt.Fprintf(stderr, "%s: command not found\n", c.Name)
 		return
 	}
 
 	comm := exec.Command(c.Name, c.Args...)
-	stdin, err := comm.StdinPipe()
-	if err != nil {
-		return
-	}
+	comm.Stdin = stdin
+	comm.Stdout = stdout
+	comm.Stderr = stderr
 
-	stdout, err := comm.StdoutPipe()
-	if err != nil {
-		return
-	}
-
-	stderr, err := comm.StderrPipe()
-	if err != nil {
-		return
-	}
-
-	if err := comm.Start(); err != nil {
-		return
-	}
-
-	go func() {
-		for input := range prev.OutputChan {
-			if !input.isError {
-				stdin.Write(input.data)
-			}
-		}
-	}()
-
-	go func() {
-		data := make([]byte, 1024)
-		for {
-			n, err := stdout.Read(data)
-			if err != nil {
-				break
-			}
-
-			c.OutputChan <- message{data: data[:n], isError: false}
-		}
-	}()
-
-	slurp, _ := io.ReadAll(stderr)
-	if len(slurp) > 0 {
-		c.OutputChan <- message{data: slurp, isError: true}
-	}
-
-	comm.Wait()
+	comm.Run()
 }
