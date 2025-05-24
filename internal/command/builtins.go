@@ -2,7 +2,9 @@ package command
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -10,16 +12,17 @@ import (
 	"github.com/codecrafters-io/shell-starter-go/internal/executable"
 )
 
-var Builtins []string = []string{"exit", "echo", "type", "pwd", "cd"}
+var Builtins []string = []string{"exit", "echo", "type", "pwd", "cd", "history"}
 
 type Handler func([]string) string
 
 var BuiltinHandlers map[string]Handler = map[string]Handler{
-	"exit": exit,
-	"echo": echo,
-	"type": commType,
-	"pwd":  pwd,
-	"cd":   cd,
+	"exit":    exit,
+	"echo":    echo,
+	"type":    commType,
+	"pwd":     pwd,
+	"cd":      cd,
+	"history": history,
 }
 
 func exit(args []string) string {
@@ -90,4 +93,23 @@ func cd(args []string) string {
 	}
 
 	return ""
+}
+
+func history(args []string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err.Error()
+	}
+
+	hist, err := os.OpenFile(filepath.Join(home, ".bash_history"), os.O_RDONLY|os.O_CREATE, 0664)
+	if err != nil {
+		return err.Error()
+	}
+
+	history, err := io.ReadAll(hist)
+	if err != nil {
+		return err.Error()
+	}
+
+	return strings.TrimRight(string(history), "\n")
 }
