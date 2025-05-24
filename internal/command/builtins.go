@@ -101,15 +101,24 @@ func history(args []string) string {
 		return err.Error()
 	}
 
-	hist, err := os.OpenFile(filepath.Join(home, ".bash_history"), os.O_RDONLY|os.O_CREATE, 0664)
+	hist, err := os.OpenFile(filepath.Join(home, ".bash_history"), os.O_RDONLY, 0664)
 	if err != nil {
 		return err.Error()
 	}
+	defer hist.Close()
 
 	history, err := io.ReadAll(hist)
 	if err != nil {
 		return err.Error()
 	}
 
-	return strings.TrimRight(string(history), "\n")
+	commands := strings.Split(string(history), "\n")
+	ret := ""
+	for i, command := range commands {
+		if command != "" {
+			ret += fmt.Sprintf(" %d %s\n", i+1, command)
+		}
+	}
+
+	return strings.TrimRight(ret, "\n")
 }

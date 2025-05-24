@@ -29,6 +29,10 @@ func (p Parser) ParseInput() ([]command.Command, error) {
 		return nil, err
 	}
 
+	if err := writeToHistory(line); err != nil {
+		return nil, err
+	}
+
 	commands := strings.Split(line, "|")
 	ret := make([]command.Command, 0)
 
@@ -217,4 +221,23 @@ func tokenize(input string) []string {
 	}
 
 	return tokens
+}
+
+func writeToHistory(line string) error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	hist, err := os.OpenFile(filepath.Join(home, ".bash_history"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0664)
+	if err != nil {
+		return err
+	}
+	defer hist.Close()
+
+	if _, err := hist.WriteString(line + "\n"); err != nil {
+		return err
+	}
+
+	return nil
 }
