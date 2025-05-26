@@ -2,9 +2,7 @@ package command
 
 import (
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -95,27 +93,25 @@ func cd(args []string) string {
 	return ""
 }
 
+var History []string
+
 func history(args []string) string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return err.Error()
+	var err error
+	limit := len(History)
+	if len(args) == 1 {
+		limit, err 	= strconv.Atoi(args[0])
+		if err != nil {
+			return err.Error()
+		}
+
+		if limit < 0 {
+			return "n can't be negative"
+		}
 	}
 
-	hist, err := os.OpenFile(filepath.Join(home, ".bash_history"), os.O_RDONLY, 0664)
-	if err != nil {
-		return err.Error()
-	}
-	defer hist.Close()
-
-	history, err := io.ReadAll(hist)
-	if err != nil {
-		return err.Error()
-	}
-
-	commands := strings.Split(string(history), "\n")
 	ret := ""
-	for i, command := range commands {
-		if command != "" {
+	for i, command := range History {
+		if command != "" && (len(History)-i <= limit) {
 			ret += fmt.Sprintf(" %d %s\n", i+1, command)
 		}
 	}
