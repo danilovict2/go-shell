@@ -63,6 +63,7 @@ func (p Parser) readInput() (string, error) {
 		fmt.Fprintf(os.Stdout, "\n")
 	}()
 
+	historyPos := len(command.History) - 1
 Loop:
 	for {
 		b, err := p.Reader.ReadByte()
@@ -83,6 +84,15 @@ Loop:
 		case '\x03':
 			fmt.Fprintf(os.Stdout, "^C")
 			return "", fmt.Errorf("^C")
+		case 0x41:
+			if historyPos >= 0 {
+				clearLine()
+				input = command.History[historyPos]
+				historyPos--
+				fmt.Fprintf(os.Stdout, "$ %s", input)
+			} else {
+				fmt.Fprint(os.Stdout, "\a")
+			}
 		default:
 			if b >= 32 {
 				input += string(b)
@@ -167,6 +177,12 @@ func allHaveSamePrefix(suffixes []string) bool {
 	}
 
 	return true
+}
+
+func clearLine() {
+	fmt.Fprintf(os.Stdout, "\r\x1b[D")
+	fmt.Fprint(os.Stdout, "\r\033[K")
+	fmt.Fprint(os.Stdout, "\x1b[D")
 }
 
 func tokenize(input string) []string {

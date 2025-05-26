@@ -68,6 +68,10 @@ func (c *Command) getOutputWriters() (stdout, stderr io.WriteCloser, err error) 
 }
 
 func Pipeline(commands []Command) {
+	if len(commands) == 0 {
+		return
+	}
+	
 	stderrs := make([]io.WriteCloser, 0)
 	var (
 		stdout, stderr io.WriteCloser
