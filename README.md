@@ -31,6 +31,7 @@ cd go-shell
 * `type`
 * `pwd`
 * `cd`
+* `history`
 
 ## Examples
 
@@ -99,6 +100,40 @@ Will print:
 
 ```bash
 -rw-rw-r--  1 user user       0 May  7 18:57 file
+```
+
+## Command History
+
+The shell supports command history navigation using the arrow keys. You can recall and reuse previous commands as follows:
+
+- Press <kbd>↑</kbd> (Up Arrow) to cycle backward through your command history.
+- Press <kbd>↓</kbd> (Down Arrow) to move forward in the history.
+
+Example session:
+
+```bash
+$ echo hello
+hello
+$ echo world
+world
+# Press ↑
+$ echo world
+# Press ↑ again
+$ echo hello
+# Press ↓
+$ echo world
+# Press Enter
+world
+$
+```
+
+You can also view and interact with your command history using the built-in `history` command.
+
+```bash
+$ history
+1  echo hello
+2  echo world
+3  ls -l
 ```
 
 ## 🤝 Contributing
