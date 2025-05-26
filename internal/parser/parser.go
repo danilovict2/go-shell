@@ -63,7 +63,7 @@ func (p Parser) readInput() (string, error) {
 		fmt.Fprintf(os.Stdout, "\n")
 	}()
 
-	historyPos := len(command.History) - 1
+	historyPos := len(command.History)
 Loop:
 	for {
 		b, err := p.Reader.ReadByte()
@@ -84,15 +84,56 @@ Loop:
 		case '\x03':
 			fmt.Fprintf(os.Stdout, "^C")
 			return "", fmt.Errorf("^C")
-		case 0x41:
-			if historyPos >= 0 {
-				clearLine()
-				input = command.History[historyPos]
-				historyPos--
-				fmt.Fprintf(os.Stdout, "$ %s", input)
-			} else {
-				fmt.Fprint(os.Stdout, "\a")
+		case 0x1b:
+			bracket, err := p.Reader.ReadByte()
+			if err != nil || bracket != '[' {
+				break Loop
 			}
+
+			arrowCode, err := p.Reader.ReadByte()
+			if err != nil {
+				break Loop
+			}
+
+			switch arrowCode {
+			case 'A':
+				if len(command.History) == 0 {
+					bell()
+					continue
+				}
+
+				if historyPos > 0 {
+					historyPos--
+					if historyPos < len(command.History) {
+						input = command.History[historyPos]
+						clearLine()
+						fmt.Fprintf(os.Stdout, "%s", input)
+					} else {
+						bell()
+						historyPos--
+					}
+				} else {
+					bell()
+				}
+			case 'B':
+				if len(command.History) == 0 || historyPos < 0 {
+					bell()
+					continue
+				}
+
+				historyPos++
+				if historyPos < len(command.History) {
+					input = command.History[historyPos]
+					clearLine()
+					fmt.Fprintf(os.Stdout, "%s", input)
+				} else {
+					bell()
+					historyPos--
+				}
+			default:
+				break
+			}
+
 		default:
 			if b >= 32 {
 				input += string(b)
@@ -112,7 +153,7 @@ func handleTab(input string, doubletab bool) (string, bool) {
 		doubletab = false
 	case 0:
 		doubletab = false
-		fmt.Fprint(os.Stdout, "\a")
+		bell()
 	default:
 		if allHaveSamePrefix(suffixes) {
 			input = appendSuffix(input, suffixes[0])
@@ -124,7 +165,7 @@ func handleTab(input string, doubletab bool) (string, bool) {
 				}
 				fmt.Fprint(os.Stdout, "\r\n$ ", input)
 			} else {
-				fmt.Fprint(os.Stdout, "\a")
+				bell()
 			}
 		}
 
@@ -183,6 +224,11 @@ func clearLine() {
 	fmt.Fprintf(os.Stdout, "\r\x1b[D")
 	fmt.Fprint(os.Stdout, "\r\033[K")
 	fmt.Fprint(os.Stdout, "\x1b[D")
+	fmt.Fprint(os.Stdout, "$ ")
+}
+
+func bell() {
+	fmt.Fprint(os.Stdout, "\a")
 }
 
 func tokenize(input string) []string {
