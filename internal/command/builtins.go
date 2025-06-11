@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"slices"
 	"strconv"
@@ -98,8 +99,24 @@ var History []string
 func history(args []string) string {
 	var err error
 	limit := len(History)
-	if len(args) == 1 {
-		limit, err 	= strconv.Atoi(args[0])
+
+	switch {
+	case len(args) == 0:
+		break
+	case args[0] == "-r":
+		if len(args) < 2 {
+			return "missing path to history file"
+		}
+
+		histFromFile, err := readHistoryFromFile(args[1])
+		if err != nil {
+			return err.Error()
+		}
+
+		History = append(History, histFromFile...)
+		return ""
+	default:
+		limit, err = strconv.Atoi(args[0])
 		if err != nil {
 			return err.Error()
 		}
@@ -117,4 +134,20 @@ func history(args []string) string {
 	}
 
 	return strings.TrimRight(ret, "\n")
+}
+
+func readHistoryFromFile(file string) ([]string, error) {
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, err
+	}
+
+	history, err := io.ReadAll(f)
+	if err != nil {
+		return nil, err
+	}
+
+	return slices.DeleteFunc(strings.Split(string(history), "\n"), func(s string) bool {
+		return s == ""
+	}), nil
 }
