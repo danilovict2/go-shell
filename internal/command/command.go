@@ -61,6 +61,15 @@ func (c *Command) getOutputWriters() (stdout, stderr io.WriteCloser, err error) 
 			}
 
 			c.Args = slices.Delete(c.Args, i, i+2)
+		case "-w":
+			if c.Name != "history" {
+				return
+			}
+
+			stdout, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_CREATE, 0644)
+			if err != nil {
+				return nil, nil, fmt.Errorf("error opening file: %v", err)
+			}
 		}
 	}
 
@@ -71,7 +80,7 @@ func Pipeline(commands []Command) {
 	if len(commands) == 0 {
 		return
 	}
-	
+
 	stderrs := make([]io.WriteCloser, 0)
 	var (
 		stdout, stderr io.WriteCloser

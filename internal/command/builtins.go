@@ -99,6 +99,7 @@ var History []string
 func history(args []string) string {
 	var err error
 	limit := len(History)
+	writeIndex := true
 
 	switch {
 	case len(args) == 0:
@@ -115,6 +116,8 @@ func history(args []string) string {
 
 		History = append(History, histFromFile...)
 		return ""
+	case args[0] == "-w":
+		writeIndex = false
 	default:
 		limit, err = strconv.Atoi(args[0])
 		if err != nil {
@@ -129,7 +132,11 @@ func history(args []string) string {
 	ret := ""
 	for i, command := range History {
 		if command != "" && (len(History)-i <= limit) {
-			ret += fmt.Sprintf(" %d %s\n", i+1, command)
+			if writeIndex {
+				ret += fmt.Sprintf(" %d %s\n", i+1, command)
+			} else {
+				ret += fmt.Sprintf("%s\n", command)
+			}
 		}
 	}
 
