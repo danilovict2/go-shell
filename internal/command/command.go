@@ -70,6 +70,16 @@ func (c *Command) getOutputWriters() (stdout, stderr io.WriteCloser, err error) 
 			if err != nil {
 				return nil, nil, fmt.Errorf("error opening file: %v", err)
 			}
+		
+		case "-a":
+			if c.Name != "history" {
+				return
+			}
+
+			stdout, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+			if err != nil {
+				return nil, nil, fmt.Errorf("error opening file: %v", err)
+			}
 		}
 	}
 

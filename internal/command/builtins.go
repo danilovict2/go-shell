@@ -95,9 +95,11 @@ func cd(args []string) string {
 }
 
 var History []string
+var lastAppendIndex = -1
 
 func history(args []string) string {
 	var err error
+	offset := 0
 	limit := len(History)
 	writeIndex := true
 
@@ -116,6 +118,12 @@ func history(args []string) string {
 
 		History = append(History, histFromFile...)
 		return ""
+	case args[0] == "-a":
+		writeIndex = false
+		if lastAppendIndex >= 0 {
+			offset = lastAppendIndex
+		}
+		lastAppendIndex = len(History)
 	case args[0] == "-w":
 		writeIndex = false
 	default:
@@ -130,7 +138,7 @@ func history(args []string) string {
 	}
 
 	ret := ""
-	for i, command := range History {
+	for i, command := range History[offset:] {
 		if command != "" && (len(History)-i <= limit) {
 			if writeIndex {
 				ret += fmt.Sprintf(" %d %s\n", i+1, command)
