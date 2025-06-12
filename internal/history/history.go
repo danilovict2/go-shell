@@ -77,6 +77,7 @@ func LoadFromFile(file string) error {
 		}
 	}
 
+	lastAppendIndex = len(Commands)
 	return nil
 }
 
@@ -90,7 +91,7 @@ func WriteToFile(file string) error {
 		return err
 	}
 
-	for _, command := range Commands {
+	for _, command := range Commands[lastAppendIndex:] {
 		fmt.Fprintln(stdout, command)
 	}
 
