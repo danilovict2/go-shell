@@ -24,7 +24,7 @@ func History(args []string) string {
 		if len(args) < 2 {
 			return "missing path to history file"
 		}
-		
+
 		LoadFromFile(args[1])
 		return ""
 	case args[0] == "-a":
@@ -75,6 +75,23 @@ func LoadFromFile(file string) error {
 		if command != "" {
 			Commands = append(Commands, command)
 		}
+	}
+
+	return nil
+}
+
+func WriteToFile(file string) error {
+	if file == "" {
+		return fmt.Errorf("file path must not be empty")
+	}
+
+	stdout, err := os.OpenFile(os.Getenv("HISTFILE"), os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+
+	for _, command := range Commands {
+		fmt.Fprintln(stdout, command)
 	}
 
 	return nil

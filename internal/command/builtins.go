@@ -37,6 +37,7 @@ func exit(args []string) string {
 		}
 	}
 
+	history.WriteToFile(os.Getenv("HISTFILE"))
 	os.Exit(exitCode)
 	return ""
 }

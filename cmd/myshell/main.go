@@ -18,6 +18,8 @@ func main() {
 		}
 	}
 
+	defer history.WriteToFile(os.Getenv("HISTFILE"))
+
 	for {
 		fmt.Fprint(os.Stdout, "$ ")
 		parser := parser.New(bufio.NewReader(os.Stdin))
@@ -30,4 +32,5 @@ func main() {
 
 		command.Pipeline(commands)
 	}
+
 }
