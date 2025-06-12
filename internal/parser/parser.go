@@ -10,6 +10,7 @@ import (
 
 	"github.com/codecrafters-io/shell-starter-go/internal/command"
 	"github.com/codecrafters-io/shell-starter-go/internal/executable"
+	"github.com/codecrafters-io/shell-starter-go/internal/history"
 	"golang.org/x/term"
 )
 
@@ -29,7 +30,7 @@ func (p Parser) ParseInput() ([]command.Command, error) {
 		return nil, err
 	}
 
-	command.History = append(command.History, line)
+	history.Commands = append(history.Commands, line)
 
 	commands := strings.Split(line, "|")
 	ret := make([]command.Command, 0)
@@ -63,7 +64,7 @@ func (p Parser) readInput() (string, error) {
 		fmt.Fprintf(os.Stdout, "\n")
 	}()
 
-	historyPos := len(command.History)
+	historyPos := len(history.Commands)
 Loop:
 	for {
 		b, err := p.Reader.ReadByte()
@@ -97,15 +98,15 @@ Loop:
 
 			switch arrowCode {
 			case 'A':
-				if len(command.History) == 0 {
+				if len(history.Commands) == 0 {
 					bell()
 					continue
 				}
 
 				if historyPos > 0 {
 					historyPos--
-					if historyPos < len(command.History) {
-						input = command.History[historyPos]
+					if historyPos < len(history.Commands) {
+						input = history.Commands[historyPos]
 						clearLine()
 						fmt.Fprintf(os.Stdout, "%s", input)
 					} else {
@@ -116,14 +117,14 @@ Loop:
 					bell()
 				}
 			case 'B':
-				if len(command.History) == 0 || historyPos < 0 {
+				if len(history.Commands) == 0 || historyPos < 0 {
 					bell()
 					continue
 				}
 
 				historyPos++
-				if historyPos < len(command.History) {
-					input = command.History[historyPos]
+				if historyPos < len(history.Commands) {
+					input = history.Commands[historyPos]
 					clearLine()
 					fmt.Fprintf(os.Stdout, "%s", input)
 				} else {

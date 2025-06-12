@@ -2,13 +2,13 @@ package command
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/internal/executable"
+	"github.com/codecrafters-io/shell-starter-go/internal/history"
 )
 
 var Builtins []string = []string{"exit", "echo", "type", "pwd", "cd", "history"}
@@ -21,7 +21,7 @@ var BuiltinHandlers map[string]Handler = map[string]Handler{
 	"type":    commType,
 	"pwd":     pwd,
 	"cd":      cd,
-	"history": history,
+	"history": history.History,
 }
 
 func exit(args []string) string {
@@ -92,77 +92,4 @@ func cd(args []string) string {
 	}
 
 	return ""
-}
-
-var History []string
-var lastAppendIndex = -1
-
-func history(args []string) string {
-	var err error
-	offset := 0
-	limit := len(History)
-	writeIndex := true
-
-	switch {
-	case len(args) == 0:
-		break
-	case args[0] == "-r":
-		if len(args) < 2 {
-			return "missing path to history file"
-		}
-
-		histFromFile, err := readHistoryFromFile(args[1])
-		if err != nil {
-			return err.Error()
-		}
-
-		History = append(History, histFromFile...)
-		return ""
-	case args[0] == "-a":
-		writeIndex = false
-		if lastAppendIndex >= 0 {
-			offset = lastAppendIndex
-		}
-		lastAppendIndex = len(History)
-	case args[0] == "-w":
-		writeIndex = false
-	default:
-		limit, err = strconv.Atoi(args[0])
-		if err != nil {
-			return err.Error()
-		}
-
-		if limit < 0 {
-			return "n can't be negative"
-		}
-	}
-
-	ret := ""
-	for i, command := range History[offset:] {
-		if command != "" && (len(History)-i <= limit) {
-			if writeIndex {
-				ret += fmt.Sprintf(" %d %s\n", i+1, command)
-			} else {
-				ret += fmt.Sprintf("%s\n", command)
-			}
-		}
-	}
-
-	return strings.TrimRight(ret, "\n")
-}
-
-func readHistoryFromFile(file string) ([]string, error) {
-	f, err := os.Open(file)
-	if err != nil {
-		return nil, err
-	}
-
-	history, err := io.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-
-	return slices.DeleteFunc(strings.Split(string(history), "\n"), func(s string) bool {
-		return s == ""
-	}), nil
 }

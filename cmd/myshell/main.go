@@ -3,13 +3,21 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/codecrafters-io/shell-starter-go/internal/command"
+	"github.com/codecrafters-io/shell-starter-go/internal/history"
 	"github.com/codecrafters-io/shell-starter-go/internal/parser"
 )
 
 func main() {
+	if os.Getenv("HISTFILE") != "" {
+		if err := history.LoadFromFile(os.Getenv("HISTFILE")); err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	for {
 		fmt.Fprint(os.Stdout, "$ ")
 		parser := parser.New(bufio.NewReader(os.Stdin))
