@@ -104,7 +104,10 @@ Will print:
 
 ## Command History
 
-The shell supports command history navigation using the arrow keys. You can recall and reuse previous commands as follows:
+The shell supports command history navigation using the arrow keys, allowing you to recall and reuse previous commands. You can also view and interact with your history using the built-in `history` command.
+
+**Note:** Command history is stored only for the current session and will be lost once the program exits.  
+To make history persistent, use the file-based approach described below.
 
 - Press <kbd>↑</kbd> (Up Arrow) to cycle backward through your command history.
 - Press <kbd>↓</kbd> (Down Arrow) to move forward in the history.
@@ -127,13 +130,46 @@ world
 $
 ```
 
-You can also view and interact with your command history using the built-in `history` command.
+To view your command history, use:
 
 ```bash
 $ history
 1  echo hello
 2  echo world
 3  ls -l
+```
+
+You can manage your shell history with the `history` command and the `HISTFILE` environment variable:
+
+- Read history from a file with `-r <histfile>`:
+```bash
+$ history -r <path_to_history_file>
+$ history
+1  history -r <path_to_history_file>
+2  echo hello
+3  echo world
+4  history
+```
+
+- Save your current session's history with `-w <histfile>`:
+```bash
+$ echo hello
+hello
+$ echo world
+world
+$ history -w <path_to_history_file>
+```
+
+- Append history to a file `-a <histfile>`:
+```bash
+$ echo new_command
+new_command
+$ history -a <path_to_history_file>
+```
+
+- Automatically read from and append to a history file on shell startup and exit with `HISTFILE` environment variable:
+```bash
+HISTFILE=<path_to_history_file> ./your_program.sh
 ```
 
 ## 🤝 Contributing
