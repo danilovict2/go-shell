@@ -86,7 +86,7 @@ func WriteToFile(file string) error {
 		return fmt.Errorf("file path must not be empty")
 	}
 
-	stdout, err := os.OpenFile(os.Getenv("HISTFILE"), os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+	stdout, err := os.OpenFile(file, os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		return err
 	}
