@@ -61,25 +61,6 @@ func (c *Command) getOutputWriters() (stdout, stderr io.WriteCloser, err error) 
 			}
 
 			c.Args = slices.Delete(c.Args, i, i+2)
-		case "-w":
-			if c.Name != "history" {
-				return
-			}
-
-			stdout, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_CREATE, 0644)
-			if err != nil {
-				return nil, nil, fmt.Errorf("error opening file: %v", err)
-			}
-		
-		case "-a":
-			if c.Name != "history" {
-				return
-			}
-
-			stdout, err = os.OpenFile(c.Args[i+1], os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
-			if err != nil {
-				return nil, nil, fmt.Errorf("error opening file: %v", err)
-			}
 		}
 	}
 
@@ -126,7 +107,9 @@ func Pipeline(commands []Command) {
 func (c *Command) execute(stdin io.ReadCloser, stdout, stderr io.WriteCloser, wg *sync.WaitGroup) {
 	handler, isBuiltin := BuiltinHandlers[c.Name]
 	if isBuiltin {
-		if output := handler(c.Args); output != "" {
+		if output, err := handler(c.Args); err != nil {
+			fmt.Fprintln(stderr, err)
+		} else if output != "" {
 			fmt.Fprintln(stdout, output)
 		}
 	} else {

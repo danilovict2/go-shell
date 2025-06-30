@@ -1,6 +1,7 @@
 package history
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -9,55 +10,57 @@ import (
 )
 
 var Commands []string
-var lastAppendIndex = -1
+var LastAppendIndexes map[string]int = make(map[string]int)
 
-func History(args []string) string {
-	var err error
-	offset := 0
-	limit := len(Commands)
-	writeIndex := true
+func History(args []string) (string, error) {
+	var (
+		limit int = len(Commands)
+		err   error
+	)
 
-	switch {
-	case len(args) == 0:
-		break
-	case args[0] == "-r":
-		if len(args) < 2 {
-			return "missing path to history file"
-		}
+	if len(args) > 0 {
+		switch args[0] {
+		case "-r":
+			if len(args) == 1 {
+				return "", errors.New("history: missing path to history file")
+			}
+			return "", LoadFromFile(args[1])
+		case "-a":
+			if len(args) == 1 {
+				return "", errors.New("history: missing path to history file")
+			}
 
-		LoadFromFile(args[1])
-		return ""
-	case args[0] == "-a":
-		writeIndex = false
-		if lastAppendIndex >= 0 {
-			offset = lastAppendIndex
-		}
-		lastAppendIndex = len(Commands)
-	case args[0] == "-w":
-		writeIndex = false
-	default:
-		limit, err = strconv.Atoi(args[0])
-		if err != nil {
-			return err.Error()
-		}
+			if err := WriteToFile(args[1], LastAppendIndexes[args[1]], os.O_WRONLY|os.O_APPEND); err != nil {
+				return "", err
+			}
 
-		if limit < 0 {
-			return "n can't be negative"
-		}
-	}
+			LastAppendIndexes[args[1]] = len(Commands)
+			return "", nil
+		case "-w":
+			if len(args) == 1 {
+				return "", errors.New("history: missing path to history file")
+			}
+			return "", WriteToFile(args[1], 0, os.O_WRONLY|os.O_CREATE)
+		default:
+			limit, err = strconv.Atoi(args[0])
+			if err != nil {
+				return "", err
+			}
 
-	ret := ""
-	for i, command := range Commands[offset:] {
-		if command != "" && (len(Commands)-i <= limit) {
-			if writeIndex {
-				ret += fmt.Sprintf(" %d %s\n", i+1, command)
-			} else {
-				ret += fmt.Sprintf("%s\n", command)
+			if limit < 0 {
+				return "", errors.New("n can't be negative")
 			}
 		}
 	}
 
-	return strings.TrimRight(ret, "\n")
+	ret := ""
+	for i, command := range Commands {
+		if command != "" && (len(Commands)-i <= limit) {
+			ret += fmt.Sprintf(" %d %s\n", i+1, command)
+		}
+	}
+
+	return strings.TrimRight(ret, "\n"), nil
 }
 
 func LoadFromFile(file string) error {
@@ -77,21 +80,21 @@ func LoadFromFile(file string) error {
 		}
 	}
 
-	lastAppendIndex = len(Commands)
+	LastAppendIndexes[file] = len(Commands)
 	return nil
 }
 
-func WriteToFile(file string) error {
+func WriteToFile(file string, start, flag int) error {
 	if file == "" {
-		return fmt.Errorf("file path must not be empty")
+		return errors.New("file path must not be empty")
 	}
 
-	stdout, err := os.OpenFile(file, os.O_WRONLY|os.O_APPEND, 0644)
+	stdout, err := os.OpenFile(file, flag, 0644)
 	if err != nil {
 		return err
 	}
 
-	for _, command := range Commands[lastAppendIndex:] {
+	for _, command := range Commands[start:] {
 		fmt.Fprintln(stdout, command)
 	}
 

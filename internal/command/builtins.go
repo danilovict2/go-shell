@@ -1,6 +1,7 @@
 package command
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -13,7 +14,7 @@ import (
 
 var Builtins []string = []string{"exit", "echo", "type", "pwd", "cd", "history"}
 
-type Handler func([]string) string
+type Handler func([]string) (string, error)
 
 var BuiltinHandlers map[string]Handler = map[string]Handler{
 	"exit":    exit,
@@ -24,7 +25,7 @@ var BuiltinHandlers map[string]Handler = map[string]Handler{
 	"history": history.History,
 }
 
-func exit(args []string) string {
+func exit(args []string) (string, error) {
 	var (
 		exitCode int
 		err      error
@@ -33,50 +34,50 @@ func exit(args []string) string {
 	if len(args) > 0 {
 		exitCode, err = strconv.Atoi(args[0])
 		if err != nil {
-			return err.Error()
+			return "", err
 		}
 	}
 
-	history.WriteToFile(os.Getenv("HISTFILE"))
+	history.WriteToFile(os.Getenv("HISTFILE"), history.LastAppendIndexes[os.Getenv("HISTFILE")], os.O_WRONLY|os.O_APPEND)
 	os.Exit(exitCode)
-	return ""
+	return "", nil
 }
 
-func echo(args []string) string {
-	return strings.Join(args, " ")
+func echo(args []string) (string, error) {
+	return strings.Join(args, " "), nil
 }
 
-func commType(args []string) string {
+func commType(args []string) (string, error) {
 	if len(args) != 1 {
-		return ""
+		return "", errors.New("type: missing operand")
 	}
 
 	isBuiltin := slices.Contains(Builtins, args[0])
 	if isBuiltin {
-		return fmt.Sprintf("%s is a shell builtin", args[0])
+		return fmt.Sprintf("%s is a shell builtin", args[0]), nil
 	}
 
 	executableFilePath := executable.GetExecutableFilePath(args[0])
 	if executableFilePath != "" {
-		return fmt.Sprintf("%s is %s", args[0], executableFilePath)
+		return fmt.Sprintf("%s is %s", args[0], executableFilePath), nil
 	}
 
-	return fmt.Sprintf("%s: not found", args[0])
+	return fmt.Sprintf("%s: not found", args[0]), nil
 }
 
-func pwd(args []string) string {
+func pwd(args []string) (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
-		return err.Error()
+		return "", err
 	}
 
-	return dir
+	return dir, nil
 }
 
-func cd(args []string) string {
+func cd(args []string) (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return err.Error()
+		return "", err
 	}
 
 	if len(args) == 0 {
@@ -89,8 +90,8 @@ func cd(args []string) string {
 
 	err = os.Chdir(args[0])
 	if err != nil {
-		return fmt.Sprintf("cd: %s: No such file or directory", args[0])
+		return "", fmt.Errorf("cd: %s: No such file or directory", args[0])
 	}
 
-	return ""
+	return "", nil
 }

@@ -18,7 +18,7 @@ func main() {
 		}
 	}
 
-	defer history.WriteToFile(os.Getenv("HISTFILE"))
+	defer history.WriteToFile(os.Getenv("HISTFILE"), history.LastAppendIndexes[os.Getenv("HISTFILE")], os.O_WRONLY|os.O_APPEND)
 
 	for {
 		fmt.Fprint(os.Stdout, "$ ")
