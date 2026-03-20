@@ -3,6 +3,7 @@ package parser
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"slices"
@@ -204,6 +205,26 @@ func autocomplete(prefix string) (suffixes []string) {
 
 		if strings.HasPrefix(command, prefix) && !slices.Contains(suffixes, suffix) {
 			suffixes = append(suffixes, command[len(prefix):])
+		}
+	}
+
+	// Only autocomplete files if they're a part of a command
+	if strings.Contains(prefix, " ") {
+		dir, err := os.Getwd()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		files, err := os.ReadDir(dir)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		prefix = prefix[strings.Index(prefix, " ")+1:]
+		for _, f := range files {
+			if strings.HasPrefix(f.Name(), prefix) || prefix == "" {
+				suffixes = append(suffixes, f.Name()[len(prefix):])
+			}
 		}
 	}
 
