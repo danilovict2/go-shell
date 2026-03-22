@@ -210,25 +210,38 @@ func autocomplete(prefix string) (suffixes []string) {
 
 	// Only autocomplete files if they're a part of a command
 	if strings.Contains(prefix, " ") {
-		dir, err := os.Getwd()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		files, err := os.ReadDir(dir)
-		if err != nil {
-			log.Fatal(err)
-		}
-
 		prefix = prefix[strings.Index(prefix, " ")+1:]
-		for _, f := range files {
-			if strings.HasPrefix(f.Name(), prefix) || prefix == "" {
-				suffixes = append(suffixes, f.Name()[len(prefix):])
-			}
-		}
+		suffixes = append(suffixes, autocompleteFilename(prefix)...)
 	}
 
 	slices.Sort(suffixes)
+	return suffixes
+}
+
+func autocompleteFilename(filePrefix string) (suffixes []string) {
+	suffixes = make([]string, 0)
+
+	dir, file := filepath.Split(filePrefix)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		dir, err = os.Getwd()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	filePrefix = file
+
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, f := range files {
+		if strings.HasPrefix(f.Name(), filePrefix) || filePrefix == "" {
+			suffixes = append(suffixes, f.Name()[len(filePrefix):])
+		}
+	}
+
 	return suffixes
 }
 
