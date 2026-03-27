@@ -149,16 +149,19 @@ Loop:
 
 func handleTab(input string, doubletab bool) (string, bool) {
 	suffixes := autocomplete(input)
-	switch len(suffixes) {
-	case 1:
-		input = appendSuffix(input, suffixes[0]+" ")
+	switch {
+	case len(suffixes) == 1, allHaveSamePrefix(suffixes):
+		input += suffixes[0]
+		fmt.Fprint(os.Stdout, suffixes[0])
+		//input = appendSuffix(input, suffixes[0]+" ")
 		doubletab = false
-	case 0:
+	case len(suffixes) == 0:
 		doubletab = false
 		bell()
 	default:
 		if allHaveSamePrefix(suffixes) {
-			input = appendSuffix(input, suffixes[0])
+			input += suffixes[0]
+			fmt.Fprint(os.Stdout, suffixes[0])
 		} else {
 			if doubletab {
 				fmt.Fprint(os.Stdout, "\r\n")
@@ -174,85 +177,6 @@ func handleTab(input string, doubletab bool) (string, bool) {
 		doubletab = !doubletab
 	}
 	return input, doubletab
-}
-
-func appendSuffix(input, suffix string) string {
-	input += suffix
-	fmt.Fprint(os.Stdout, suffix)
-	return input
-}
-
-func autocomplete(prefix string) (suffixes []string) {
-	suffixes = make([]string, 0)
-	if len(prefix) == 0 {
-		return suffixes
-	}
-
-	for _, command := range command.Builtins {
-		if strings.HasPrefix(command, prefix) {
-			suffixes = append(suffixes, command[len(prefix):])
-		}
-	}
-
-	executables := executable.FindExecutables()
-	for _, command := range executables {
-		command = filepath.Base(command)
-		var suffix string
-
-		if len(command) >= len(prefix) {
-			suffix = command[len(prefix):]
-		}
-
-		if strings.HasPrefix(command, prefix) && !slices.Contains(suffixes, suffix) {
-			suffixes = append(suffixes, command[len(prefix):])
-		}
-	}
-
-	// Only autocomplete files if they're a part of a command
-	if strings.Contains(prefix, " ") {
-		prefix = prefix[strings.Index(prefix, " ")+1:]
-		suffixes = append(suffixes, autocompleteFilename(prefix)...)
-	}
-
-	slices.Sort(suffixes)
-	return suffixes
-}
-
-func autocompleteFilename(filePrefix string) (suffixes []string) {
-	suffixes = make([]string, 0)
-
-	dir, file := filepath.Split(filePrefix)
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		dir, err = os.Getwd()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	filePrefix = file
-
-	files, err := os.ReadDir(dir)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, f := range files {
-		if strings.HasPrefix(f.Name(), filePrefix) || filePrefix == "" {
-			suffixes = append(suffixes, f.Name()[len(filePrefix):])
-		}
-	}
-
-	return suffixes
-}
-
-func allHaveSamePrefix(suffixes []string) bool {
-	for _, suffix := range suffixes {
-		if !strings.HasPrefix(suffix, suffixes[0]) {
-			return false
-		}
-	}
-
-	return true
 }
 
 func clearLine() {
