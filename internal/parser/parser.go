@@ -3,14 +3,11 @@ package parser
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/internal/command"
-	"github.com/codecrafters-io/shell-starter-go/internal/executable"
 	"github.com/codecrafters-io/shell-starter-go/internal/history"
 	"golang.org/x/term"
 )
@@ -150,28 +147,27 @@ Loop:
 func handleTab(input string, doubletab bool) (string, bool) {
 	suffixes := autocomplete(input)
 	switch {
-	case len(suffixes) == 1, allHaveSamePrefix(suffixes):
-		input += suffixes[0]
+	case len(suffixes) == 1:
+		input += suffixes[0].String()
 		fmt.Fprint(os.Stdout, suffixes[0])
-		//input = appendSuffix(input, suffixes[0]+" ")
 		doubletab = false
 	case len(suffixes) == 0:
 		doubletab = false
 		bell()
+	case allHaveSamePrefix(suffixes):
+		prefix := commonPrefix(suffixes)
+		input += prefix
+		fmt.Fprint(os.Stdout, prefix)
+		doubletab = false
 	default:
-		if allHaveSamePrefix(suffixes) {
-			input += suffixes[0]
-			fmt.Fprint(os.Stdout, suffixes[0])
-		} else {
-			if doubletab {
-				fmt.Fprint(os.Stdout, "\r\n")
-				for _, suffix := range suffixes {
-					fmt.Fprint(os.Stdout, input, suffix, "  ")
-				}
-				fmt.Fprint(os.Stdout, "\r\n$ ", input)
-			} else {
-				bell()
+		if doubletab {
+			fmt.Fprint(os.Stdout, "\r\n")
+			for _, suffix := range suffixes {
+				fmt.Fprint(os.Stdout, input, suffix)
 			}
+			fmt.Fprint(os.Stdout, "\r\n$ ", input)
+		} else {
+			bell()
 		}
 
 		doubletab = !doubletab

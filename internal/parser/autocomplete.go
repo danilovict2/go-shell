@@ -16,6 +16,10 @@ type Suffix struct {
 	Trailing string
 }
 
+func (s Suffix) String() string {
+	return s.Suffix + s.Trailing
+}
+
 func autocomplete(prefix string) (suffixes []Suffix) {
 	suffixes = make([]Suffix, 0)
 	if len(prefix) == 0 {
@@ -24,8 +28,7 @@ func autocomplete(prefix string) (suffixes []Suffix) {
 
 	for _, command := range command.Builtins {
 		if strings.HasPrefix(command, prefix) {
-			suffix := Suffix{Suffix: command[len(prefix):], Trailing: " "}
-			suffixes = append(suffixes, suffix)
+			suffixes = append(suffixes, Suffix{Suffix: command[len(prefix):], Trailing: " "})
 		}
 	}
 
@@ -38,9 +41,8 @@ func autocomplete(prefix string) (suffixes []Suffix) {
 			suffix = command[len(prefix):]
 		}
 
-		if strings.HasPrefix(command, prefix) && !slices.Contains(suffixes, suffix) {
-			suffix := Suffix{Suffix: command[len(prefix):], Trailing: " "}
-			suffixes = append(suffixes, command[len(prefix):])
+		if strings.HasPrefix(command, prefix) && !slices.ContainsFunc(suffixes, func(s Suffix) bool { return s.Suffix == suffix }) {
+			suffixes = append(suffixes, Suffix{Suffix: command[len(prefix):], Trailing: " "})
 		}
 	}
 
@@ -50,12 +52,12 @@ func autocomplete(prefix string) (suffixes []Suffix) {
 		suffixes = append(suffixes, autocompleteFilename(prefix)...)
 	}
 
-	slices.Sort(suffixes)
+	slices.SortFunc(suffixes, func(s1, s2 Suffix) int { return strings.Compare(s1.Suffix, s2.Suffix) })
 	return suffixes
 }
 
-func autocompleteFilename(filePrefix string) (suffixes []string) {
-	suffixes = make([]string, 0)
+func autocompleteFilename(filePrefix string) (suffixes []Suffix) {
+	suffixes = make([]Suffix, 0)
 
 	dir, file := filepath.Split(filePrefix)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
@@ -74,9 +76,9 @@ func autocompleteFilename(filePrefix string) (suffixes []string) {
 
 	for _, f := range files {
 		if strings.HasPrefix(f.Name(), filePrefix) || filePrefix == "" {
-			suffix := f.Name()[len(filePrefix):]
+			suffix := Suffix{Suffix: f.Name()[len(filePrefix):], Trailing: " "}
 			if f.IsDir() {
-				suffix = suffix + "/"
+				suffix.Trailing = "/"
 			}
 
 			suffixes = append(suffixes, suffix)
@@ -86,12 +88,26 @@ func autocompleteFilename(filePrefix string) (suffixes []string) {
 	return suffixes
 }
 
-func allHaveSamePrefix(suffixes []string) bool {
-	for _, suffix := range suffixes {
-		if !strings.HasPrefix(suffix, suffixes[0]) {
-			return false
+func commonPrefix(suffixes []Suffix) string {
+	if len(suffixes) == 0 {
+		return ""
+	}
+
+	prefix := suffixes[0].Suffix
+	for _, s := range suffixes[1:] {
+		for !strings.HasPrefix(s.Suffix, prefix) {
+			prefix = prefix[:len(prefix)-1]
 		}
 	}
 
-	return true
+	return prefix
+}
+
+func allHaveSamePrefix(suffixes []Suffix) bool {
+	if len(suffixes) == 0 {
+		return false
+	}
+
+	prefix := commonPrefix(suffixes)
+	return len(prefix) > 0
 }
