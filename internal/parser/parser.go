@@ -163,7 +163,11 @@ func handleTab(input string, doubletab bool) (string, bool) {
 		if doubletab {
 			fmt.Fprint(os.Stdout, "\r\n")
 			for _, suffix := range suffixes {
-				fmt.Fprint(os.Stdout, input, suffix)
+				if !suffix.IsFile {
+					fmt.Fprint(os.Stdout, input)
+				}
+
+				fmt.Fprint(os.Stdout, suffix)
 			}
 			fmt.Fprint(os.Stdout, "\r\n$ ", input)
 		} else {

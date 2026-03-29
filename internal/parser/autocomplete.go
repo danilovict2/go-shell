@@ -14,6 +14,7 @@ import (
 type Suffix struct {
 	Suffix   string
 	Trailing string
+	IsFile   bool
 }
 
 func (s Suffix) String() string {
@@ -48,7 +49,7 @@ func autocomplete(prefix string) (suffixes []Suffix) {
 
 	// Only autocomplete files if they're a part of a command
 	if strings.Contains(prefix, " ") {
-		prefix = prefix[strings.Index(prefix, " ")+1:]
+		prefix = prefix[strings.LastIndex(prefix, " ")+1:]
 		suffixes = append(suffixes, autocompleteFilename(prefix)...)
 	}
 
@@ -76,7 +77,7 @@ func autocompleteFilename(filePrefix string) (suffixes []Suffix) {
 
 	for _, f := range files {
 		if strings.HasPrefix(f.Name(), filePrefix) || filePrefix == "" {
-			suffix := Suffix{Suffix: f.Name()[len(filePrefix):], Trailing: " "}
+			suffix := Suffix{Suffix: f.Name()[len(filePrefix):], Trailing: " ", IsFile: true}
 			if f.IsDir() {
 				suffix.Trailing = "/"
 			}
