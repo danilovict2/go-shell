@@ -11,54 +11,54 @@ import (
 	"github.com/codecrafters-io/shell-starter-go/internal/executable"
 )
 
-type Suffix struct {
+type Completion struct {
+	Prefix   string
 	Suffix   string
 	Trailing string
-	IsFile   bool
 }
 
-func (s Suffix) String() string {
-	return s.Suffix + s.Trailing
+func (c Completion) String() string {
+	return c.Suffix + c.Trailing
 }
 
-func autocomplete(prefix string) (suffixes []Suffix) {
-	suffixes = make([]Suffix, 0)
+func autocomplete(prefix string) (completions []Completion) {
+	completions = make([]Completion, 0)
 	if len(prefix) == 0 {
-		return suffixes
+		return completions
 	}
 
 	for _, command := range command.Builtins {
 		if strings.HasPrefix(command, prefix) {
-			suffixes = append(suffixes, Suffix{Suffix: command[len(prefix):], Trailing: " "})
+			completions = append(completions, Completion{Prefix: prefix, Suffix: command[len(prefix):], Trailing: " "})
 		}
 	}
 
 	executables := executable.FindExecutables()
 	for _, command := range executables {
 		command = filepath.Base(command)
-		var suffix string
+		var completion string
 
 		if len(command) >= len(prefix) {
-			suffix = command[len(prefix):]
+			completion = command[len(prefix):]
 		}
 
-		if strings.HasPrefix(command, prefix) && !slices.ContainsFunc(suffixes, func(s Suffix) bool { return s.Suffix == suffix }) {
-			suffixes = append(suffixes, Suffix{Suffix: command[len(prefix):], Trailing: " "})
+		if strings.HasPrefix(command, prefix) && !slices.ContainsFunc(completions, func(s Completion) bool { return s.Suffix == completion }) {
+			completions = append(completions, Completion{Prefix: prefix, Suffix: command[len(prefix):], Trailing: " "})
 		}
 	}
 
 	// Only autocomplete files if they're a part of a command
 	if strings.Contains(prefix, " ") {
 		prefix = prefix[strings.LastIndex(prefix, " ")+1:]
-		suffixes = append(suffixes, autocompleteFilename(prefix)...)
+		completions = append(completions, autocompleteFilename(prefix)...)
 	}
 
-	slices.SortFunc(suffixes, func(s1, s2 Suffix) int { return strings.Compare(s1.Suffix, s2.Suffix) })
-	return suffixes
+	slices.SortFunc(completions, func(s1, s2 Completion) int { return strings.Compare(s1.Suffix, s2.Suffix) })
+	return completions
 }
 
-func autocompleteFilename(filePrefix string) (suffixes []Suffix) {
-	suffixes = make([]Suffix, 0)
+func autocompleteFilename(filePrefix string) (completions []Completion) {
+	completions = make([]Completion, 0)
 
 	dir, file := filepath.Split(filePrefix)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
@@ -77,38 +77,29 @@ func autocompleteFilename(filePrefix string) (suffixes []Suffix) {
 
 	for _, f := range files {
 		if strings.HasPrefix(f.Name(), filePrefix) || filePrefix == "" {
-			suffix := Suffix{Suffix: f.Name()[len(filePrefix):], Trailing: " ", IsFile: true}
+			completion := Completion{Prefix: filePrefix, Suffix: f.Name()[len(filePrefix):], Trailing: " "}
 			if f.IsDir() {
-				suffix.Trailing = "/"
+				completion.Trailing = "/"
 			}
 
-			suffixes = append(suffixes, suffix)
+			completions = append(completions, completion)
 		}
 	}
 
-	return suffixes
+	return completions
 }
 
-func commonPrefix(suffixes []Suffix) string {
-	if len(suffixes) == 0 {
+func commonPrefix(completions []Completion) string {
+	if len(completions) == 0 {
 		return ""
 	}
 
-	prefix := suffixes[0].Suffix
-	for _, s := range suffixes[1:] {
+	prefix := completions[0].Suffix
+	for _, s := range completions[1:] {
 		for !strings.HasPrefix(s.Suffix, prefix) {
 			prefix = prefix[:len(prefix)-1]
 		}
 	}
 
 	return prefix
-}
-
-func allHaveSamePrefix(suffixes []Suffix) bool {
-	if len(suffixes) == 0 {
-		return false
-	}
-
-	prefix := commonPrefix(suffixes)
-	return len(prefix) > 0
 }

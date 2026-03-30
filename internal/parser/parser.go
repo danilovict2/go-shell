@@ -145,29 +145,29 @@ Loop:
 }
 
 func handleTab(input string, doubletab bool) (string, bool) {
-	suffixes := autocomplete(input)
+	completions := autocomplete(input)
+	prefix := commonPrefix(completions)
+
 	switch {
-	case len(suffixes) == 1:
-		input += suffixes[0].String()
-		fmt.Fprint(os.Stdout, suffixes[0])
+	case len(completions) == 1:
+		input += completions[0].String()
+		fmt.Fprint(os.Stdout, completions[0])
 		doubletab = false
-	case len(suffixes) == 0:
+	case len(completions) == 0:
 		doubletab = false
 		bell()
-	case allHaveSamePrefix(suffixes):
-		prefix := commonPrefix(suffixes)
+	case prefix != "":
 		input += prefix
 		fmt.Fprint(os.Stdout, prefix)
 		doubletab = false
 	default:
 		if doubletab {
 			fmt.Fprint(os.Stdout, "\r\n")
-			for _, suffix := range suffixes {
-				if !suffix.IsFile {
-					fmt.Fprint(os.Stdout, input)
+			for _, completion := range completions {
+				fmt.Fprint(os.Stdout, completion.Prefix, completion)
+				if completion.Trailing != " " {
+					fmt.Fprint(os.Stdout, " ")
 				}
-
-				fmt.Fprint(os.Stdout, suffix)
 			}
 			fmt.Fprint(os.Stdout, "\r\n$ ", input)
 		} else {
