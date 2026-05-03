@@ -36,15 +36,17 @@ func FindExecutables() []string {
 					return err
 				}
 
-				if !info.IsDir() && info.Mode().Perm()&0100 != 0 {
+				if !info.IsDir() && info.Mode().Perm()&0111 != 0 {
 					executables = append(executables, fPath)
 				}
 
 				return nil
 			})
+
 		}()
 	}
-	
+
 	wg.Wait()
 	return executables
 }
+

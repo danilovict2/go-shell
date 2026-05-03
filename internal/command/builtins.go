@@ -12,7 +12,7 @@ import (
 	"github.com/codecrafters-io/shell-starter-go/internal/history"
 )
 
-var Builtins []string = []string{"exit", "echo", "type", "pwd", "cd", "history", "jobs"}
+var Builtins []string = []string{"exit", "echo", "type", "pwd", "cd", "history", "jobs", "complete"}
 
 type Handler func([]string) (string, error)
 
@@ -98,5 +98,9 @@ func cd(args []string) (string, error) {
 }
 
 func jobs(args []string) (string, error) {
+	return "", nil
+}
+
+func complete(args []string) (string, error) {
 	return "", nil
 }
