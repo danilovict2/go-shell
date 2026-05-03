@@ -12,7 +12,7 @@ import (
 	"github.com/codecrafters-io/shell-starter-go/internal/history"
 )
 
-var Builtins []string = []string{"exit", "echo", "type", "pwd", "cd", "history"}
+var Builtins []string = []string{"exit", "echo", "type", "pwd", "cd", "history", "jobs"}
 
 type Handler func([]string) (string, error)
 
@@ -23,6 +23,7 @@ var BuiltinHandlers map[string]Handler = map[string]Handler{
 	"pwd":     pwd,
 	"cd":      cd,
 	"history": history.History,
+	"jobs":    jobs,
 }
 
 func exit(args []string) (string, error) {
@@ -93,5 +94,9 @@ func cd(args []string) (string, error) {
 		return "", fmt.Errorf("cd: %s: No such file or directory", args[0])
 	}
 
+	return "", nil
+}
+
+func jobs(args []string) (string, error) {
 	return "", nil
 }
