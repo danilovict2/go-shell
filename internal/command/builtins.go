@@ -17,13 +17,14 @@ var Builtins []string = []string{"exit", "echo", "type", "pwd", "cd", "history",
 type Handler func([]string) (string, error)
 
 var BuiltinHandlers map[string]Handler = map[string]Handler{
-	"exit":    exit,
-	"echo":    echo,
-	"type":    commType,
-	"pwd":     pwd,
-	"cd":      cd,
-	"history": history.History,
-	"jobs":    jobs,
+	"exit":     exit,
+	"echo":     echo,
+	"type":     commType,
+	"pwd":      pwd,
+	"cd":       cd,
+	"history":  history.History,
+	"jobs":     jobs,
+	"complete": complete,
 }
 
 func exit(args []string) (string, error) {
@@ -102,5 +103,19 @@ func jobs(args []string) (string, error) {
 }
 
 func complete(args []string) (string, error) {
+	if len(args) == 0 {
+		return "", nil
+	}
+
+	switch args[0] {
+	case "-p":
+		if len(args) < 2 {
+			return "", nil
+		}
+
+		return fmt.Sprintf("complete: %s: no completion specification", args[1]), nil
+
+	}
+
 	return "", nil
 }
