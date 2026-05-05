@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/codecrafters-io/shell-starter-go/internal/completions"
 	"github.com/codecrafters-io/shell-starter-go/internal/executable"
 	"github.com/codecrafters-io/shell-starter-go/internal/history"
 )
@@ -107,14 +108,22 @@ func complete(args []string) (string, error) {
 		return "", nil
 	}
 
-	switch args[0] {
-	case "-p":
-		if len(args) < 2 {
-			return "", nil
+	switch {
+	case len(args) >= 2 && args[0] == "-p":
+		command := args[1]
+		compl := completions.Get(command)
+		if len(compl) == 0 {
+			return fmt.Sprintf("complete: %s: no completion specification", command), nil
 		}
 
-		return fmt.Sprintf("complete: %s: no completion specification", args[1]), nil
+		out := ""
+		for _, c := range compl {
+			out += fmt.Sprintf("complete -C '%s' %s\n", c, command)
+		}
 
+		return out[:len(out)-1], nil
+	case len(args) >= 3 && args[0] == "-C":
+		completions.Add(args[2], args[1])
 	}
 
 	return "", nil
