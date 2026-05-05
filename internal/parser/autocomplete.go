@@ -1,13 +1,16 @@
 package parser
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
 
 	"github.com/codecrafters-io/shell-starter-go/internal/command"
+	"github.com/codecrafters-io/shell-starter-go/internal/completions"
 	"github.com/codecrafters-io/shell-starter-go/internal/executable"
 )
 
@@ -22,7 +25,6 @@ func (c Completion) String() string {
 }
 
 func autocomplete(prefix string) (completions []Completion) {
-	completions = make([]Completion, 0)
 	if len(prefix) == 0 {
 		return completions
 	}
@@ -47,10 +49,18 @@ func autocomplete(prefix string) (completions []Completion) {
 		}
 	}
 
-	// Only autocomplete files if they're a part of a command
+	// Autocomplete with files and output of the completer
 	if strings.Contains(prefix, " ") {
-		prefix = prefix[strings.LastIndex(prefix, " ")+1:]
-		completions = append(completions, autocompleteFilename(prefix)...)
+		lastSpace := strings.LastIndex(prefix, " ")
+		command := prefix[:lastSpace]
+		prefix = prefix[lastSpace+1:]
+
+		completerCompletions := autocompleteCompleter(command, prefix)
+		completions = append(completions, autocompleteCompleter(command, prefix)...)
+
+		if len(completerCompletions) == 0 {
+			completions = append(completions, autocompleteFilename(prefix)...)
+		}
 	}
 
 	slices.SortFunc(completions, func(s1, s2 Completion) int { return strings.Compare(s1.Suffix, s2.Suffix) })
@@ -58,8 +68,6 @@ func autocomplete(prefix string) (completions []Completion) {
 }
 
 func autocompleteFilename(filePrefix string) (completions []Completion) {
-	completions = make([]Completion, 0)
-
 	dir, file := filepath.Split(filePrefix)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		dir, err = os.Getwd()
@@ -102,4 +110,26 @@ func commonPrefix(completions []Completion) string {
 	}
 
 	return prefix
+}
+
+func autocompleteCompleter(command, prefix string) (c []Completion) {
+	compl := completions.Get(command)
+	for _, completionScript := range compl {
+		cmd := exec.Command(completionScript)
+		output, err := cmd.Output()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			continue
+		}
+
+		scriptCompletions := strings.Split(string(output), "\n")
+		for _, cmp := range scriptCompletions {
+			if cmp != "" && strings.HasPrefix(cmp, prefix) {
+				c = append(c, Completion{Prefix: prefix, Suffix: cmp[len(prefix):], Trailing: " "})
+			}
+		}
+
+	}
+
+	return c
 }

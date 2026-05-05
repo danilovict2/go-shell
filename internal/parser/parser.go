@@ -22,7 +22,7 @@ func New(r *bufio.Reader) Parser {
 	}
 }
 
-func (p Parser) ParseInput() ([]command.Command, error) {
+func (p Parser) ParseInput() (ret []command.Command, err error) {
 	line, err := p.readInput()
 	if err != nil {
 		return nil, err
@@ -31,7 +31,6 @@ func (p Parser) ParseInput() ([]command.Command, error) {
 	history.Commands = append(history.Commands, line)
 
 	commands := strings.Split(line, "|")
-	ret := make([]command.Command, 0)
 
 	for _, cmd := range commands {
 		cmd = strings.TrimSpace(cmd)

@@ -22,8 +22,7 @@ func GetExecutableFilePath(command string) string {
 	return executables[idx]
 }
 
-func FindExecutables() []string {
-	executables := make([]string, 0)
+func FindExecutables() (executables []string) {
 	paths := strings.Split(os.Getenv("PATH"), ":")
 	wg := sync.WaitGroup{}
 
@@ -49,4 +48,3 @@ func FindExecutables() []string {
 	wg.Wait()
 	return executables
 }
-
