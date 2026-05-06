@@ -51,14 +51,12 @@ func autocomplete(prefix string) (completions []Completion) {
 
 	// Autocomplete with files and output of the completer
 	if strings.Contains(prefix, " ") {
-		lastSpace := strings.LastIndex(prefix, " ")
-		command := prefix[:lastSpace]
-		prefix = prefix[lastSpace+1:]
-
-		completerCompletions := autocompleteCompleter(command, prefix)
-		completions = append(completions, autocompleteCompleter(command, prefix)...)
+		completerCompletions := autocompleteCompleter(prefix)
+		completions = append(completions, completerCompletions...)
 
 		if len(completerCompletions) == 0 {
+			lastSpace := strings.LastIndex(prefix, " ")
+			prefix = prefix[lastSpace+1:]
 			completions = append(completions, autocompleteFilename(prefix)...)
 		}
 	}
@@ -112,10 +110,20 @@ func commonPrefix(completions []Completion) string {
 	return prefix
 }
 
-func autocompleteCompleter(command, prefix string) (c []Completion) {
+func autocompleteCompleter(expression string) (c []Completion) {
+	tokens := strings.Fields(expression)
+	command, word, prevWord := tokens[0], "", ""
+	if len(tokens) > 1 {
+		word = tokens[len(tokens)-1]
+	}
+
+	if len(tokens) > 2 {
+		prevWord = tokens[1]
+	}
+
 	compl := completions.Get(command)
 	for _, completionScript := range compl {
-		cmd := exec.Command(completionScript)
+		cmd := exec.Command(completionScript, command, word, prevWord)
 		output, err := cmd.Output()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -124,8 +132,8 @@ func autocompleteCompleter(command, prefix string) (c []Completion) {
 
 		scriptCompletions := strings.Split(string(output), "\n")
 		for _, cmp := range scriptCompletions {
-			if cmp != "" && strings.HasPrefix(cmp, prefix) {
-				c = append(c, Completion{Prefix: prefix, Suffix: cmp[len(prefix):], Trailing: " "})
+			if cmp != "" && strings.HasPrefix(cmp, word) {
+				c = append(c, Completion{Prefix: word, Suffix: cmp[len(word):], Trailing: " "})
 			}
 		}
 
