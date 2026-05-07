@@ -11,6 +11,12 @@ func Add(command, pathToCompletion string) {
 	completions[command] = append(completions[command], pathToCompletion)
 }
 
+func Remove(command string) {
+	mu.Lock()
+	defer mu.Unlock()
+	delete(completions, command)
+}
+
 func Get(command string) []string {
 	mu.Lock()
 	compl := completions[command]

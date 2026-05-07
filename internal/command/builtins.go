@@ -124,6 +124,8 @@ func complete(args []string) (string, error) {
 		return out[:len(out)-1], nil
 	case len(args) >= 3 && args[0] == "-C":
 		completions.Add(args[2], args[1])
+	case len(args) >= 2 && args[0] == "-r":
+		completions.Remove(args[1])
 	}
 
 	return "", nil
