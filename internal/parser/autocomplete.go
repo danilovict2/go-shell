@@ -51,10 +51,9 @@ func autocomplete(prefix string) (completions []Completion) {
 
 	// Autocomplete with files and output of the completer
 	if strings.Contains(prefix, " ") {
-		completerCompletions := autocompleteCompleter(prefix)
-		completions = append(completions, completerCompletions...)
+		completions = autocompleteCompleter(prefix)
 
-		if len(completerCompletions) == 0 {
+		if len(completions) == 0 {
 			lastSpace := strings.LastIndex(prefix, " ")
 			prefix = prefix[lastSpace+1:]
 			completions = append(completions, autocompleteFilename(prefix)...)
@@ -112,13 +111,13 @@ func commonPrefix(completions []Completion) string {
 
 func autocompleteCompleter(expression string) (c []Completion) {
 	tokens := strings.Fields(expression)
-	command, word, prevWord := tokens[0], "", ""
+	command, word, prevWord := tokens[0], "", tokens[0]
 	if len(tokens) > 1 {
 		word = tokens[len(tokens)-1]
 	}
 
 	if len(tokens) > 2 {
-		prevWord = tokens[1]
+		prevWord = tokens[len(tokens)-2]
 	}
 
 	if err := os.Setenv("COMP_LINE", expression); err != nil {
@@ -149,6 +148,6 @@ func autocompleteCompleter(expression string) (c []Completion) {
 		}
 
 	}
-
+	
 	return c
 }

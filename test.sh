@@ -1,3 +1,3 @@
 #!/usr/bin/env python3
-print('run')
-
+print('pull')
+print('push')
