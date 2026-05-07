@@ -13,7 +13,7 @@ import (
 	"github.com/codecrafters-io/shell-starter-go/internal/history"
 )
 
-var Builtins []string = []string{"exit", "echo", "type", "pwd", "cd", "history", "jobs", "complete"}
+var Builtins []string = []string{"exit", "echo", "type", "pwd", "cd", "history", "jobs", "complete", "declare"}
 
 type Handler func([]string) (string, error)
 
@@ -26,6 +26,7 @@ var BuiltinHandlers map[string]Handler = map[string]Handler{
 	"history":  history.History,
 	"jobs":     jobs,
 	"complete": complete,
+	"declare":  declare,
 }
 
 func exit(args []string) (string, error) {
@@ -128,5 +129,9 @@ func complete(args []string) (string, error) {
 		completions.Remove(args[1])
 	}
 
+	return "", nil
+}
+
+func declare(args []string) (string, error) {
 	return "", nil
 }
