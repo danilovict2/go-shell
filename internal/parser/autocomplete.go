@@ -121,8 +121,19 @@ func autocompleteCompleter(expression string) (c []Completion) {
 		prevWord = tokens[1]
 	}
 
+	if err := os.Setenv("COMP_LINE", expression); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return
+	}
+
+	if err := os.Setenv("COMP_POINT", fmt.Sprint(len(expression))); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return
+	}
+
 	compl := completions.Get(command)
 	for _, completionScript := range compl {
+
 		cmd := exec.Command(completionScript, command, word, prevWord)
 		output, err := cmd.Output()
 		if err != nil {
