@@ -11,6 +11,7 @@ import (
 	"github.com/codecrafters-io/shell-starter-go/internal/completions"
 	"github.com/codecrafters-io/shell-starter-go/internal/executable"
 	"github.com/codecrafters-io/shell-starter-go/internal/history"
+	"github.com/codecrafters-io/shell-starter-go/internal/parameter"
 )
 
 var Builtins []string = []string{"exit", "echo", "type", "pwd", "cd", "history", "jobs", "complete", "declare"}
@@ -133,5 +134,11 @@ func complete(args []string) (string, error) {
 }
 
 func declare(args []string) (string, error) {
+	switch {
+	case len(args) >= 2 && args[0] == "-p":
+		_, err := parameter.Get()
+		return "", fmt.Errorf("declare: %s: %w", args[1], err)
+	}
+
 	return "", nil
 }
