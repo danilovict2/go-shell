@@ -136,8 +136,16 @@ func complete(args []string) (string, error) {
 func declare(args []string) (string, error) {
 	switch {
 	case len(args) >= 2 && args[0] == "-p":
-		_, err := parameter.Get()
-		return "", fmt.Errorf("declare: %s: %w", args[1], err)
+		v, err := parameter.Get(args[1])
+		if err != nil {
+			return "", fmt.Errorf("declare: %s: %w", args[1], err)
+		}
+
+		return fmt.Sprintf("declare -- %s=\"%s\"", args[1], v), nil
+	case len(args) > 0 && strings.Contains(args[0], "="):
+		parts := strings.Split(args[0], "=")
+		varName, value := parts[0], parts[1]
+		parameter.Set(varName, value)
 	}
 
 	return "", nil
