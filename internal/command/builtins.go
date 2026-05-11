@@ -145,7 +145,10 @@ func declare(args []string) (string, error) {
 	case len(args) > 0 && strings.Contains(args[0], "="):
 		parts := strings.Split(args[0], "=")
 		varName, value := parts[0], parts[1]
-		parameter.Set(varName, value)
+		err := parameter.Set(varName, value)
+		if err != nil {
+			return "", fmt.Errorf("declare: `%s': %w", args[0], err)
+		}
 	}
 
 	return "", nil
