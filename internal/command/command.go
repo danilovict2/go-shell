@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	"github.com/codecrafters-io/shell-starter-go/internal/executable"
-	"github.com/codecrafters-io/shell-starter-go/internal/parameter"
 )
 
 type Command struct {
@@ -18,15 +17,6 @@ type Command struct {
 }
 
 func New(name string, args []string) Command {
-	for i, arg := range args {
-		for j := range arg {
-			if arg[j] == '$' {
-				val, _ := parameter.Get(arg[j+1:])
-				args[i] = arg[:j] + val
-			}
-		}
-	}
-
 	return Command{
 		Name: name,
 		Args: args,

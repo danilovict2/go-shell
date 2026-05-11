@@ -9,6 +9,7 @@ import (
 
 	"github.com/codecrafters-io/shell-starter-go/internal/command"
 	"github.com/codecrafters-io/shell-starter-go/internal/history"
+	"github.com/codecrafters-io/shell-starter-go/internal/parameter"
 	"golang.org/x/term"
 )
 
@@ -39,7 +40,7 @@ func (p Parser) ParseInput() (ret []command.Command, err error) {
 			continue
 		}
 
-		ret = append(ret, command.New(strings.ToLower(tokens[0]), tokens[1:]))
+		ret = append(ret, command.New(strings.ToLower(tokens[0]), parseArgs(tokens[1:])))
 	}
 
 	return ret, nil
@@ -239,4 +240,27 @@ func tokenize(input string) []string {
 	}
 
 	return tokens
+}
+
+func parseArgs(args []string) []string {
+	for i, arg := range args {
+		for j := range arg {
+			if arg[j] == '$' {
+				varName := arg[j+1:]
+				k := len(arg)
+				if j+1 < len(arg) && arg[j+1] == '{' {
+					if idx := strings.Index(varName, "}"); idx != -1 {
+						idx += j
+						varName = arg[j+2 : idx+1]
+						k = idx + 2
+					}
+				}
+				
+				val, _ := parameter.Get(varName)
+				args[i] = arg[:j] + val + arg[k:]
+			}
+		}
+	}
+
+	return args
 }
