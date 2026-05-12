@@ -88,20 +88,28 @@ func Pipeline(commands []Command) {
 		commands[i] = command
 	}
 
-	if len(commands) == 1 {
-		commands[0].execute(os.Stdin, stdout, stderr, nil)
-	} else {
-		wg := &sync.WaitGroup{}
-		wg.Add(2)
-		pr, pw := io.Pipe()
-		go commands[0].execute(os.Stdin, pw, stderrs[0], wg)
-		for i := 1; i < len(commands)-2; i++ {
-			wg.Add(1)
-			go commands[i].execute(pr, pw, stderrs[i], wg)
+	var (
+		reader io.ReadCloser = os.Stdin
+		wg                   = &sync.WaitGroup{}
+		writer io.WriteCloser
+		pr     io.ReadCloser
+		pw     io.WriteCloser
+	)
+
+	for i, cmd := range commands {
+		if i == len(commands)-1 {
+			writer = stdout
+		} else {
+			pr, pw = io.Pipe()
+			writer = pw
 		}
-		go commands[len(commands)-1].execute(pr, stdout, stderr, wg)
-		wg.Wait()
+
+		wg.Add(1)
+		go cmd.execute(reader, writer, stderrs[i], wg)
+		reader = pr
 	}
+
+	wg.Wait()
 }
 
 func (c *Command) execute(stdin io.ReadCloser, stdout, stderr io.WriteCloser, wg *sync.WaitGroup) {
