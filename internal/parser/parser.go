@@ -243,6 +243,8 @@ func tokenize(input string) []string {
 }
 
 func parseArgs(args []string) []string {
+	parsedArgs := make([]string, 0)
+
 	for i, arg := range args {
 		for j := range arg {
 			if arg[j] == '$' {
@@ -255,12 +257,16 @@ func parseArgs(args []string) []string {
 						k = idx + 2
 					}
 				}
-				
+
 				val, _ := parameter.Get(varName)
 				args[i] = arg[:j] + val + arg[k:]
 			}
 		}
+
+		if args[i] != "" {
+			parsedArgs = append(parsedArgs, args[i])
+		}
 	}
 
-	return args
+	return parsedArgs
 }
