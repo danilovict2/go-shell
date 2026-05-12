@@ -68,26 +68,6 @@ func (c *Command) getOutputWriters() (stdout, stderr io.WriteCloser, err error) 
 }
 
 func Pipeline(commands []Command) {
-	if len(commands) == 0 {
-		return
-	}
-
-	stderrs := make([]io.WriteCloser, 0)
-	var (
-		stdout, stderr io.WriteCloser
-		err            error
-	)
-
-	for i, command := range commands {
-		stdout, stderr, err = command.getOutputWriters()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			return
-		}
-		stderrs = append(stderrs, stderr)
-		commands[i] = command
-	}
-
 	var (
 		reader io.ReadCloser = os.Stdin
 		wg                   = &sync.WaitGroup{}
@@ -97,6 +77,12 @@ func Pipeline(commands []Command) {
 	)
 
 	for i, cmd := range commands {
+		stdout, stderr, err := cmd.getOutputWriters()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			continue
+		}
+
 		if i == len(commands)-1 {
 			writer = stdout
 		} else {
@@ -105,7 +91,7 @@ func Pipeline(commands []Command) {
 		}
 
 		wg.Add(1)
-		go cmd.execute(reader, writer, stderrs[i], wg)
+		go cmd.execute(reader, writer, stderr, wg)
 		reader = pr
 	}
 
