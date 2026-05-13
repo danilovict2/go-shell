@@ -143,7 +143,5 @@ func (c *Command) executeNonBuiltin(stdin io.Reader, stdout, stderr io.Writer) {
 		return
 	}
 
-	if err := comm.Run(); err != nil {
-		fmt.Fprintln(stderr, err)
-	}
+	comm.Run()
 }
