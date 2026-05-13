@@ -31,8 +31,13 @@ func (p Parser) ParseInput() (ret []command.Command, err error) {
 
 	history.Commands = append(history.Commands, line)
 
-	commands := strings.Split(line, "|")
+	background := false
+	if line[len(line)-1] == '&' {
+		background = true
+		line = line[:len(line)-1]
+	}
 
+	commands := strings.Split(line, "|")
 	for _, cmd := range commands {
 		cmd = strings.TrimSpace(cmd)
 		tokens := tokenize(cmd)
@@ -40,7 +45,7 @@ func (p Parser) ParseInput() (ret []command.Command, err error) {
 			continue
 		}
 
-		ret = append(ret, command.New(strings.ToLower(tokens[0]), parseArgs(tokens[1:])))
+		ret = append(ret, command.New(strings.ToLower(tokens[0]), parseArgs(tokens[1:]), background))
 	}
 
 	return ret, nil

@@ -12,14 +12,16 @@ import (
 )
 
 type Command struct {
-	Name string
-	Args []string
+	Name       string
+	Args       []string
+	Background bool
 }
 
-func New(name string, args []string) Command {
+func New(name string, args []string, background bool) Command {
 	return Command{
-		Name: name,
-		Args: args,
+		Name:       name,
+		Args:       args,
+		Background: background,
 	}
 }
 
@@ -116,9 +118,7 @@ func (c *Command) execute(stdin io.ReadCloser, stdout, stderr io.WriteCloser, wg
 		}
 	}
 
-	if wg != nil {
-		wg.Done()
-	}
+	wg.Done()
 }
 
 func (c *Command) executeNonBuiltin(stdin io.Reader, stdout, stderr io.Writer) {
@@ -132,5 +132,18 @@ func (c *Command) executeNonBuiltin(stdin io.Reader, stdout, stderr io.Writer) {
 	comm.Stdout = stdout
 	comm.Stderr = stderr
 
-	comm.Run()
+	if c.Background {
+		if err := comm.Start(); err != nil {
+			fmt.Fprintln(stderr, err)
+			return
+		}
+
+		fmt.Fprintf(stdout, "[1] %d\n", comm.Process.Pid)
+		go comm.Wait()
+		return
+	}
+
+	if err := comm.Run(); err != nil {
+		fmt.Fprintln(stderr, err)
+	}
 }
