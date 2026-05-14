@@ -6,9 +6,11 @@ import (
 	"os"
 	"os/exec"
 	"slices"
+	"strings"
 	"sync"
 
 	"github.com/codecrafters-io/shell-starter-go/internal/executable"
+	"github.com/codecrafters-io/shell-starter-go/internal/job"
 )
 
 type Command struct {
@@ -140,6 +142,9 @@ func (c *Command) executeNonBuiltin(stdin io.Reader, stdout, stderr io.Writer) {
 
 		fmt.Fprintf(stdout, "[1] %d\n", comm.Process.Pid)
 		go comm.Wait()
+
+		job.Add(job.Job{Command: fmt.Sprintf("%s %s &", c.Name, strings.Join(c.Args, " ")), Status: "Running"})
+
 		return
 	}
 

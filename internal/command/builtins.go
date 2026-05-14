@@ -11,6 +11,7 @@ import (
 	"github.com/codecrafters-io/shell-starter-go/internal/completions"
 	"github.com/codecrafters-io/shell-starter-go/internal/executable"
 	"github.com/codecrafters-io/shell-starter-go/internal/history"
+	"github.com/codecrafters-io/shell-starter-go/internal/job"
 	"github.com/codecrafters-io/shell-starter-go/internal/parameter"
 )
 
@@ -102,7 +103,14 @@ func cd(args []string) (string, error) {
 }
 
 func jobs(args []string) (string, error) {
-	return "", nil
+	j := job.GetAll()
+	ret := ""
+
+	for _, job := range j {
+		ret += job.String()
+	}
+
+	return ret, nil
 }
 
 func complete(args []string) (string, error) {
