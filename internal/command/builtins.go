@@ -106,8 +106,11 @@ func jobs(args []string) (string, error) {
 	j := job.GetAll()
 	ret := ""
 
-	for _, job := range j {
+	for i, job := range j {
 		ret += job.String()
+		if i != len(j)-1 {
+			ret += "\n"
+		}
 	}
 
 	return ret, nil

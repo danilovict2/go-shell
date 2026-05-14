@@ -12,12 +12,20 @@ type Job struct {
 }
 
 func (j Job) String() string {
-	return fmt.Sprintf("[%d]+  %-24s%s", j.number, j.Status, j.Command)
+	mostRecent := ""
+	if j.number == MostRecentJobNumber {
+		mostRecent = "+"
+	}
+	if j.number == MostRecentJobNumber - 1 {
+		mostRecent = "-"
+	}
+
+	return fmt.Sprintf("[%d]%s  %-24s%s", j.number, mostRecent, j.Status, j.Command)
 }
 
 var jobs []Job
 var mu sync.Mutex
-var nextJobNumber int = 0
+var MostRecentJobNumber int = 0
 
 func GetAll() []Job {
 	mu.Lock()
@@ -29,8 +37,8 @@ func GetAll() []Job {
 }
 
 func Add(job Job) {
-	nextJobNumber += 1
-	job.number = nextJobNumber
+	MostRecentJobNumber += 1
+	job.number = MostRecentJobNumber
 
 	mu.Lock()
 	jobs = append(jobs, job)
