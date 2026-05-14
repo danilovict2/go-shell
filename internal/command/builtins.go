@@ -112,7 +112,8 @@ func jobs(args []string) (string, error) {
 			ret += "\n"
 		}
 	}
-
+	
+	job.Reap()
 	return ret, nil
 }
 

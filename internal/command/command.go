@@ -140,10 +140,12 @@ func (c *Command) executeNonBuiltin(stdin io.Reader, stdout, stderr io.Writer) {
 			return
 		}
 
-		job.Add(job.Job{Command: fmt.Sprintf("%s %s &", c.Name, strings.Join(c.Args, " ")), Status: "Running"})
-
-		fmt.Fprintf(stdout, "[%d] %d\n", job.MostRecentJobNumber, comm.Process.Pid)
-		go comm.Wait()
+		jobNumber := job.Add(job.Job{Command: fmt.Sprintf("%s %s", c.Name, strings.Join(c.Args, " ")), Status: "Running"})
+		fmt.Fprintf(stdout, "[%d] %d\n", jobNumber, comm.Process.Pid)
+		go func() {
+			comm.Wait()
+			job.MarkDone(jobNumber)
+		}()
 
 		return
 	}

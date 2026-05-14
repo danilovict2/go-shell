@@ -13,19 +13,24 @@ type Job struct {
 
 func (j Job) String() string {
 	mostRecent := ""
-	if j.number == MostRecentJobNumber {
+	if j.number == mostRecentJobNumber {
 		mostRecent = "+"
 	}
-	if j.number == MostRecentJobNumber - 1 {
+	if j.number == mostRecentJobNumber-1 {
 		mostRecent = "-"
 	}
 
-	return fmt.Sprintf("[%d]%s  %-24s%s", j.number, mostRecent, j.Status, j.Command)
+	running := "&"
+	if j.Status != "Running" {
+		running = ""
+	}
+
+	return fmt.Sprintf("[%d]%s  %-21s%s %s", j.number, mostRecent, j.Status, j.Command, running)
 }
 
 var jobs []Job
 var mu sync.Mutex
-var MostRecentJobNumber int = 0
+var mostRecentJobNumber int = 0
 
 func GetAll() []Job {
 	mu.Lock()
@@ -36,11 +41,33 @@ func GetAll() []Job {
 	return ret
 }
 
-func Add(job Job) {
-	MostRecentJobNumber += 1
-	job.number = MostRecentJobNumber
+func MarkDone(jobNumber int) {
+	mu.Lock()
+	jobs[jobNumber-1].Status = "Done"
+	mu.Unlock()
+}
+
+func Reap() {
+	mu.Lock()
+	defer mu.Unlock()
+
+	filtered := jobs[:0]
+	for _, job := range jobs {
+		if job.Status != "Done" {
+			filtered = append(filtered, job)
+		}
+	}
+
+	jobs = filtered
+}
+
+func Add(job Job) (jobNumber int) {
+	mostRecentJobNumber += 1
+	job.number = mostRecentJobNumber
 
 	mu.Lock()
 	jobs = append(jobs, job)
 	mu.Unlock()
+
+	return mostRecentJobNumber
 }
