@@ -2,6 +2,7 @@ package executable
 
 import (
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"slices"
@@ -32,7 +33,8 @@ func FindExecutables() (executables []string) {
 			defer wg.Done()
 			filepath.Walk(path, func(fPath string, info fs.FileInfo, err error) error {
 				if err != nil {
-					return err
+					log.Println("skipping:", fPath, err)
+					return nil
 				}
 
 				if !info.IsDir() && info.Mode().Perm()&0111 != 0 {
