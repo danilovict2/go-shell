@@ -12,11 +12,15 @@ type Job struct {
 }
 
 func (j Job) String() string {
+	mu.Lock()
+	defer mu.Unlock()
+
 	mostRecent := ""
-	if j.number == mostRecentJobNumber {
+	if j.number == jobs[len(jobs)-1].number {
 		mostRecent = "+"
 	}
-	if j.number == mostRecentJobNumber-1 {
+
+	if len(jobs) > 1 && j.number == jobs[len(jobs)-2].number {
 		mostRecent = "-"
 	}
 
@@ -43,8 +47,14 @@ func GetAll() []Job {
 
 func MarkDone(jobNumber int) {
 	mu.Lock()
-	jobs[jobNumber-1].Status = "Done"
-	mu.Unlock()
+	defer mu.Unlock()
+
+	for i, job := range jobs {
+		if job.number == jobNumber {
+			jobs[i].Status = "Done"
+			break
+		}
+	}
 }
 
 func Reap() {
