@@ -8,6 +8,7 @@ import (
 
 	"github.com/codecrafters-io/shell-starter-go/internal/command"
 	"github.com/codecrafters-io/shell-starter-go/internal/history"
+	"github.com/codecrafters-io/shell-starter-go/internal/job"
 	"github.com/codecrafters-io/shell-starter-go/internal/parser"
 )
 
@@ -31,6 +32,10 @@ func main() {
 		}
 
 		command.Pipeline(commands)
+		reaped := job.Reap()
+		for _, s := range reaped {
+			fmt.Fprintln(os.Stdout, s)
+		}
 	}
 
 }

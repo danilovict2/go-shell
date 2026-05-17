@@ -57,18 +57,22 @@ func MarkDone(jobNumber int) {
 	}
 }
 
-func Reap() {
+func Reap() (reaped []string) {
 	mu.Lock()
-	defer mu.Unlock()
+	jbs := jobs
+	mu.Unlock()
 
 	filtered := jobs[:0]
-	for _, job := range jobs {
+	for _, job := range jbs {
 		if job.Status != "Done" {
 			filtered = append(filtered, job)
+		} else {
+			reaped = append(reaped, job.String())
 		}
 	}
 
 	jobs = filtered
+	return reaped
 }
 
 func Add(job Job) (jobNumber int) {
