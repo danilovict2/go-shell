@@ -104,17 +104,14 @@ func cd(args []string) (string, error) {
 
 func jobs(args []string) (string, error) {
 	j := job.GetAll()
-	ret := ""
+	strs := make([]string, 0)
 
-	for i, job := range j {
-		ret += job.String()
-		if i != len(j)-1 {
-			ret += "\n"
-		}
+	for _, job := range j {
+		strs = append(strs, job.String())
 	}
 
 	job.Reap()
-	return ret, nil
+	return strings.Join(strs, "\n"), nil
 }
 
 func complete(args []string) (string, error) {
